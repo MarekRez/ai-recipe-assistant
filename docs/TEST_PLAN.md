@@ -6,33 +6,53 @@ Validate extraction quality, schema adherence, Notion integration, and tool-driv
 
 ## Test Data
 
-1. 10-15 representative recipe samples.
-2. Mix of short, long, complete, and partially specified recipes.
+`tests/fixtures/recipes/` - 10 recipes (`NN_name.txt`) with manually written expected output (`NN_name.json`)
+plus one negative case (`11_not_a_recipe`, `{"expect_error": true}`).
+Coverage: complete recipes, missing times, step durations that must not become times, ranges/"to taste",
+fractions, prose format, a Slovak recipe, meat/fish vs. vegetarian.
 
-## Test Areas
+Before reporting results, re-check the expected JSON files by hand - they are the ground truth.
 
-1. Extraction accuracy
+## Automated Tests (pytest, offline)
 
-- Check name, ingredients, quantities, units, instructions, and times.
+Run: `.venv/Scripts/python -m pytest`. No test calls Gemini or Notion.
 
-2. Schema validity
+| File                       | What it covers                                                        |
+|----------------------------|-----------------------------------------------------------------------|
+| `test_models.py`           | schema rules, nulls, effective total time                             |
+| `test_extraction.py`       | fixtures are schema-valid, parser validation, URL detection, JSON-LD  |
+| `test_search.py`           | deterministic filters for the example intents                         |
+| `test_notion.py`           | property mapping, chunking, round trip, error messages, schema check  |
+| `test_agent.py`            | tool contracts, no save tool, scripted-model tool chain               |
+| `test_app.py`              | Streamlit review-before-save flow (AppTest)                           |
+| `test_eval_scoring.py`     | eval metric logic                                                     |
 
-- Metric: `valid_outputs / total_outputs`.
+## Live Extraction Eval (Gemini, manual)
 
-3. Hallucination control
+Run: `.venv/Scripts/python -m evals.run_extraction_eval --out evals/results/<date>.json`
 
-- Verify no invented ingredients, quantities, or times.
+Metrics:
 
-4. Notion integration
+1. Schema validity - `valid_outputs / total_outputs`.
+2. Extraction accuracy - name, ingredient recall/precision, quantity and unit accuracy, time fields.
+3. Hallucination control - extra ingredients, quantities filled where the source had none, invented times.
+   Flagged cases are printed for manual review.
+4. Negative case - non-recipe text is rejected.
 
-- Verify create and retrieve operations.
+## Notion Integration (manual)
 
-5. Agent search behavior
+1. Sidebar "Check Notion database" reports no problems.
+2. Save 10 fixture recipes through the UI, verify pages and properties in Notion.
+3. Ask the agent about them (next section).
 
-- Validate queries like vegetarian under 30 min, chicken, pasta.
+## Agent Search (manual, after saving the fixtures)
 
-## Minimal Automation Strategy
+| Query                                  | Expected recipes                                    |
+|----------------------------------------|-----------------------------------------------------|
+| vegetarian meals under 30 minutes      | Tomato Pasta, Pancakes, Mug Cake, Guacamole         |
+| something with chicken                 | Easy Chicken Curry                                  |
+| I want pasta tonight                   | Quick Vegetarian Tomato Pasta                       |
+| dinner ideas                           | all Main course recipes                             |
+| how do I make the salmon?              | full Oven-Baked Lemon Salmon recipe                 |
 
-1. Unit tests for schema and parser output normalization.
-2. Service tests for Notion mapping payload.
-3. Agent tests with mocked tool outputs.
+Record pass/fail and the tool calls the agent made (shown in logs) in `AI_LOG.md`.

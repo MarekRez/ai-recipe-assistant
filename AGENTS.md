@@ -20,6 +20,13 @@ Deliver the smallest reliable end-to-end AI agent demo for recipe knowledge mana
 2. Tool contracts are defined in `docs/AGENT_SPEC.md`.
 3. Any tool signature change must update tests and docs in same change set.
 
+## Git Workflow
+
+1. Commit progressively, one logical unit per commit (e.g. config/deps, schema, one service + its tests, agent, UI, docs) - not one big commit at the end.
+2. Each commit contains the code together with its tests and doc updates, and `python -m pytest` passes before committing.
+3. Commit messages: Conventional Commits (`feat(scope): ...`, `fix: ...`, `test: ...`, `docs: ...`, `chore: ...`), imperative mood, body explains why when not obvious.
+4. Never commit secrets (`.env`, `.streamlit/secrets.toml`) or local eval outputs (`evals/results/`).
+
 ## Definition of Done (MVP)
 
 1. Recipe text/URL input works.
