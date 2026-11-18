@@ -1,0 +1,26 @@
+{
+  "name": "Easy Chicken Curry",
+  "ingredients": [
+    {"name": "chicken thighs", "quantity": 600, "unit": "g"},
+    {"name": "onion", "quantity": 1, "unit": null},
+    {"name": "garlic", "quantity": 2, "unit": "cloves"},
+    {"name": "curry powder", "quantity": 2, "unit": "tbsp"},
+    {"name": "coconut milk", "quantity": 400, "unit": "ml"},
+    {"name": "vegetable oil", "quantity": 1, "unit": "tbsp"},
+    {"name": "salt", "quantity": null, "unit": null}
+  ],
+  "instructions": [
+    "Heat the oil in a pan and fry the onion until soft.",
+    "Add the garlic and curry powder and stir for one minute.",
+    "Add the chicken and brown it on all sides.",
+    "Pour in the coconut milk and simmer for 20 minutes.",
+    "Season with salt and serve with rice."
+  ],
+  "prep_time_minutes": 15,
+  "cook_time_minutes": 30,
+  "total_time_minutes": null,
+  "category": "Main course",
+  "vegetarian": false,
+  "tags": ["chicken", "curry", "indian"],
+  "source_url": null
+}

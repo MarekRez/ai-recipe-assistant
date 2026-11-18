@@ -1,0 +1,25 @@
+{
+  "name": "Beef and Broccoli Stir-Fry",
+  "ingredients": [
+    {"name": "beef sirloin", "quantity": 400, "unit": "g"},
+    {"name": "broccoli florets", "quantity": 300, "unit": "g"},
+    {"name": "soy sauce", "quantity": 3, "unit": "tbsp"},
+    {"name": "oyster sauce", "quantity": 1, "unit": "tbsp"},
+    {"name": "cornstarch", "quantity": 1, "unit": "tsp"},
+    {"name": "sesame oil", "quantity": 1, "unit": "tbsp"},
+    {"name": "grated ginger", "quantity": 1, "unit": "tsp"}
+  ],
+  "instructions": [
+    "Mix the soy sauce, oyster sauce and cornstarch.",
+    "Stir-fry the beef in hot sesame oil for 3 minutes, then remove it.",
+    "Stir-fry the broccoli and ginger for 4 minutes.",
+    "Return the beef, add the sauce and cook until glossy."
+  ],
+  "prep_time_minutes": 10,
+  "cook_time_minutes": 12,
+  "total_time_minutes": null,
+  "category": "Main course",
+  "vegetarian": false,
+  "tags": ["beef", "broccoli", "asian", "stir-fry"],
+  "source_url": null
+}

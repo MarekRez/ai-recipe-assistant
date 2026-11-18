@@ -1,0 +1,24 @@
+{
+  "name": "Quick Vegetarian Tomato Pasta",
+  "ingredients": [
+    {"name": "spaghetti", "quantity": 250, "unit": "g"},
+    {"name": "canned chopped tomatoes", "quantity": 400, "unit": "g"},
+    {"name": "olive oil", "quantity": 3, "unit": "tbsp"},
+    {"name": "garlic", "quantity": 2, "unit": "cloves"},
+    {"name": "fresh basil", "quantity": null, "unit": null},
+    {"name": "salt", "quantity": null, "unit": null}
+  ],
+  "instructions": [
+    "Cook the spaghetti in salted water according to the package.",
+    "Meanwhile warm the olive oil, add the sliced garlic and cook for a minute.",
+    "Add the tomatoes and simmer for 10 minutes.",
+    "Toss the pasta with the sauce and tear the basil over the top."
+  ],
+  "prep_time_minutes": null,
+  "cook_time_minutes": null,
+  "total_time_minutes": 25,
+  "category": "Main course",
+  "vegetarian": true,
+  "tags": ["pasta", "tomato", "italian", "vegetarian"],
+  "source_url": null
+}

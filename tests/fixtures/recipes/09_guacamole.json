@@ -1,0 +1,21 @@
+{
+  "name": "Simple Guacamole",
+  "ingredients": [
+    {"name": "ripe avocados", "quantity": 3, "unit": null},
+    {"name": "lime", "quantity": 1, "unit": null},
+    {"name": "small red onion", "quantity": 0.5, "unit": null},
+    {"name": "fresh coriander", "quantity": null, "unit": null},
+    {"name": "salt", "quantity": null, "unit": null}
+  ],
+  "instructions": [
+    "Mash the avocados with the juice of the lime.",
+    "Stir in the onion and coriander and season with salt."
+  ],
+  "prep_time_minutes": null,
+  "cook_time_minutes": null,
+  "total_time_minutes": 10,
+  "category": "Snack",
+  "vegetarian": true,
+  "tags": ["avocado", "mexican", "dip"],
+  "source_url": null
+}

@@ -1,0 +1,25 @@
+{
+  "name": "Bryndzové halušky",
+  "ingredients": [
+    {"name": "zemiaky", "quantity": 1, "unit": "kg"},
+    {"name": "hladká múka", "quantity": 300, "unit": "g"},
+    {"name": "vajce", "quantity": 1, "unit": null},
+    {"name": "bryndza", "quantity": 250, "unit": "g"},
+    {"name": "slanina", "quantity": 150, "unit": "g"},
+    {"name": "soľ", "quantity": null, "unit": null}
+  ],
+  "instructions": [
+    "Zemiaky ošúpeme a nastrúhame najemno.",
+    "Pridáme múku, vajce a soľ a vymiešame cesto.",
+    "Cesto pretláčame cez haluškovač do vriacej osolenej vody a varíme, kým halušky nevyplávajú.",
+    "Slaninu nakrájame na kocky a opečieme.",
+    "Scedené halušky zmiešame s bryndzou a posypeme slaninou."
+  ],
+  "prep_time_minutes": null,
+  "cook_time_minutes": null,
+  "total_time_minutes": null,
+  "category": "Main course",
+  "vegetarian": false,
+  "tags": ["slovak", "potatoes", "bryndza"],
+  "source_url": null
+}
