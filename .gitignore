@@ -40,3 +40,6 @@ Thumbs.db
 tmp/
 coverage.xml
 .coverage
+
+# Claude Code personal settings
+.claude/settings.local.json
