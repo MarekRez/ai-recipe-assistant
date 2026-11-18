@@ -1,0 +1,25 @@
+{
+  "name": "Fluffy Pancakes",
+  "ingredients": [
+    {"name": "all-purpose flour", "quantity": 1.5, "unit": "cups"},
+    {"name": "baking powder", "quantity": 2, "unit": "tsp"},
+    {"name": "sugar", "quantity": 1, "unit": "tbsp"},
+    {"name": "salt", "quantity": 0.5, "unit": "tsp"},
+    {"name": "milk", "quantity": 1.25, "unit": "cups"},
+    {"name": "egg", "quantity": 1, "unit": null},
+    {"name": "melted butter", "quantity": 2, "unit": "tbsp"}
+  ],
+  "instructions": [
+    "Whisk the flour, baking powder, sugar and salt in a bowl.",
+    "In another bowl mix the milk, egg and melted butter.",
+    "Combine both mixtures and stir until just combined.",
+    "Cook ladlefuls of batter in a hot greased pan until golden on both sides."
+  ],
+  "prep_time_minutes": 10,
+  "cook_time_minutes": 15,
+  "total_time_minutes": 25,
+  "category": "Breakfast",
+  "vegetarian": true,
+  "tags": ["pancakes", "breakfast", "sweet"],
+  "source_url": null
+}

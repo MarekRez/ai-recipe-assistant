@@ -1,0 +1,25 @@
+{
+  "name": "Red Lentil Soup",
+  "ingredients": [
+    {"name": "red lentils", "quantity": 200, "unit": "g"},
+    {"name": "carrots", "quantity": null, "unit": null},
+    {"name": "onion", "quantity": 1, "unit": null},
+    {"name": "vegetable stock", "quantity": 1, "unit": "l"},
+    {"name": "ground cumin", "quantity": 1, "unit": "tsp"},
+    {"name": "olive oil", "quantity": null, "unit": null},
+    {"name": "salt", "quantity": null, "unit": null},
+    {"name": "pepper", "quantity": null, "unit": null}
+  ],
+  "instructions": [
+    "Fry the onion and carrots in a little olive oil.",
+    "Add the cumin, lentils and stock.",
+    "Simmer for 25 minutes until the lentils are soft, then blend and season with salt and pepper."
+  ],
+  "prep_time_minutes": null,
+  "cook_time_minutes": null,
+  "total_time_minutes": null,
+  "category": "Soup",
+  "vegetarian": true,
+  "tags": ["soup", "lentils", "vegan"],
+  "source_url": null
+}

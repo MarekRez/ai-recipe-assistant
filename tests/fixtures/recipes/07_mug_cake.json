@@ -1,0 +1,22 @@
+{
+  "name": "Chocolate Mug Cake",
+  "ingredients": [
+    {"name": "flour", "quantity": 4, "unit": "tbsp"},
+    {"name": "sugar", "quantity": 4, "unit": "tbsp"},
+    {"name": "cocoa powder", "quantity": 2, "unit": "tbsp"},
+    {"name": "egg", "quantity": 1, "unit": null},
+    {"name": "milk", "quantity": 3, "unit": "tbsp"},
+    {"name": "oil", "quantity": 3, "unit": "tbsp"}
+  ],
+  "instructions": [
+    "Mix everything in a large mug until smooth.",
+    "Microwave for 90 seconds and let it cool briefly."
+  ],
+  "prep_time_minutes": null,
+  "cook_time_minutes": null,
+  "total_time_minutes": 5,
+  "category": "Dessert",
+  "vegetarian": true,
+  "tags": ["chocolate", "cake", "dessert", "quick"],
+  "source_url": null
+}

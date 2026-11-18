@@ -5,82 +5,80 @@ Minimal semester MVP proving an end-to-end AI agent workflow for recipe knowledg
 ## What This Project Demonstrates
 
 1. Add recipe input from plain text or URL.
-2. Extract normalized structured recipe data with an LLM.
-3. Let user review and edit extracted data before save.
+2. Extract normalized structured recipe data with an LLM (Gemini, JSON schema mode).
+3. Let the user review and edit extracted data before saving.
 4. Save confirmed recipes to Notion.
 5. Ask natural-language cookbook questions.
-6. Let an AI agent choose backend tools (`parse_recipe`, `save_recipe`, `search_recipes`, `get_recipe`).
+6. Let an AI agent choose backend tools (`search_recipes`, `get_recipe`, `parse_recipe`). Saving happens only after
+   user confirmation in the UI (`save_recipe`, see ADR-005).
 
 ## MVP Constraints
 
 - Keep architecture intentionally small.
-- No vector DB and no complex RAG for MVP.
+- No vector DB and no complex RAG for MVP - deterministic filtering.
 - No microservices, no separate frontend/backend stack.
 - Human-in-the-loop verification is required before saving.
 
 See `PROJECT_CONTEXT.md` and `docs/` for source-of-truth details.
 
-## Suggested Stack
+## Stack
 
-- Python
-- Streamlit
-- smolagents
-- Gemini API (Flash model)
-- Notion API
-- Pydantic
+Python 3.12, Streamlit, smolagents (`ToolCallingAgent`), Gemini API (`google-genai` + OpenAI-compatible endpoint),
+Notion API (`notion-client` 3.x), Pydantic.
 
 ## Project Layout
 
 ```
 .
-|-- app.py
+|-- app.py                      Streamlit UI
 |-- agent/
-|   |-- recipe_agent.py
-|   `-- tools.py
+|   |-- recipe_agent.py         agent setup + ask_agent()
+|   `-- tools.py                agent tools + UI save/parse functions
 |-- services/
-|   |-- gemini_service.py
-|   |-- notion_service.py
-|   `-- recipe_parser.py
-|-- models/
-|   `-- recipe.py
-|-- tests/
-|   |-- test_extraction.py
-|   |-- test_notion.py
-|   `-- test_agent.py
-|-- docs/
-|   |-- DOCS_INDEX.md
-|   |-- PRODUCT_SPEC.md
-|   |-- TECHNICAL_DESIGN.md
-|   |-- AGENT_SPEC.md
-|   |-- DATA_CONTRACTS.md
-|   |-- TEST_PLAN.md
-|   |-- DEPLOYMENT_RUNBOOK.md
-|   |-- DECISIONS.md
-|   `-- ROADMAP.md
-|-- AGENTS.md
-|-- AI_LOG.md
-|-- requirements.txt
-|-- .env.example
-`-- PROJECT_CONTEXT.md
+|   |-- gemini_service.py       structured extraction
+|   |-- recipe_parser.py        text/URL input + validation
+|   |-- url_fetcher.py          URL -> recipe text (JSON-LD first)
+|   |-- notion_service.py       Notion mapping and CRUD
+|   |-- recipe_search.py        deterministic filtering
+|   |-- config.py / errors.py
+|-- models/recipe.py            Pydantic schema
+|-- evals/                      live extraction eval
+|-- tests/                      offline pytest suite + fixtures/recipes
+|-- docs/                       specs, ADRs, Notion setup, runbook
+|-- AGENTS.md / CLAUDE.md       rules for coding agents (incl. team handoff protocol)
+|-- HANDOFF.md                  current status + next steps - read first
+|-- .claude/skills/             /start-session and /handoff for Claude Code
+|-- AI_LOG.md                   AI implementation log
+`-- PROJECT_CONTEXT.md          source of truth
 ```
 
 ## Quick Start
 
-1. Create and activate a Python virtual environment.
-2. Install dependencies from `requirements.txt`.
-3. Copy `.env.example` to `.env` and fill values.
-4. Run Streamlit app:
-
 ```bash
-streamlit run app.py
+python -m venv .venv
+.venv/Scripts/python -m pip install -r requirements.txt
+copy .env.example .env          # then fill the values
+.venv/Scripts/python -m streamlit run app.py
 ```
+
+Set up the Notion database first: `docs/NOTION_SETUP.md`.
 
 ## Environment Variables
 
-- `GEMINI_API_KEY`
-- `NOTION_API_KEY`
-- `NOTION_DATABASE_ID`
-- `APP_ENV`
+| Variable                | Purpose                                                      |
+|-------------------------|--------------------------------------------------------------|
+| `GEMINI_API_KEY`        | Google AI Studio key                                         |
+| `GEMINI_MODEL`          | Gemini Flash model id (e.g. `gemini-2.5-flash`)              |
+| `NOTION_API_KEY`        | Notion internal integration secret                           |
+| `NOTION_DATA_SOURCE_ID` | Notion data source id (not the database id)                  |
+| `APP_ENV`               | `development` / `production` (informational)                 |
+
+## Tests and Evaluation
+
+```bash
+.venv/Scripts/python -m pytest                     # offline, mocks Gemini and Notion
+.venv/Scripts/python -m evals.run_extraction_eval  # live Gemini, uses free-tier quota
+```
 
 ## Documentation Map
 

@@ -141,6 +141,10 @@ get_recipe(...)
 
 The custom tools are implemented by us.
 
+> Decision update (2026-11-18, ADR-005 in `docs/DECISIONS.md`): `save_recipe` is called by the UI after the user
+> confirms the reviewed draft; it is not exposed to the agent, because an agent run cannot pause for confirmation.
+> The agent's `parse_recipe` only stages a draft for review.
+
 The agent framework handles the orchestration loop:
 
 1. User sends a request.
