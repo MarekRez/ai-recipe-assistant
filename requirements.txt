@@ -1,0 +1,8 @@
+streamlit
+smolagents
+pydantic
+python-dotenv
+requests
+google-generativeai
+notion-client
+pytest
