@@ -22,6 +22,10 @@ dist/
 .env
 .env.*
 !.env.example
+.streamlit/secrets.toml
+
+# Local eval outputs
+evals/results/
 
 # IDE
 .vscode/

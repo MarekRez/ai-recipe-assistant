@@ -1,8 +1,9 @@
-streamlit
-smolagents
-pydantic
-python-dotenv
-requests
-google-generativeai
-notion-client
-pytest
+streamlit==1.67.0
+smolagents[openai]==1.26.0
+pydantic==2.14.3
+python-dotenv==1.2.4
+requests==2.34.2
+beautifulsoup4==4.15.0
+google-genai==3.5.0
+notion-client==3.1.0
+pytest==9.2.0
