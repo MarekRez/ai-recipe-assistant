@@ -45,7 +45,9 @@ Notion API (`notion-client` 3.x), Pydantic.
 |-- evals/                      live extraction eval
 |-- tests/                      offline pytest suite + fixtures/recipes
 |-- docs/                       specs, ADRs, Notion setup, runbook
-|-- AGENTS.md / CLAUDE.md       rules for coding agents
+|-- AGENTS.md / CLAUDE.md       rules for coding agents (incl. team handoff protocol)
+|-- HANDOFF.md                  current status + next steps - read first
+|-- .claude/skills/             /start-session and /handoff for Claude Code
 |-- AI_LOG.md                   AI implementation log
 `-- PROJECT_CONTEXT.md          source of truth
 ```

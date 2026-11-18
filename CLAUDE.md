@@ -45,5 +45,6 @@ Source of truth, in order: `PROJECT_CONTEXT.md` > `docs/*` > code. If they disag
 
 ## Workflow
 
+- The team works serially with fresh agent sessions. Start every session with `/start-session` (reads `HANDOFF.md`), end it with `/handoff`. Protocol: AGENTS.md -> Team Handoff Protocol.
 - After changing a tool signature or the schema: update `docs/AGENT_SPEC.md` / `docs/DATA_CONTRACTS.md` and tests in the same change.
 - Log notable implementation results (especially eval metrics) in `AI_LOG.md`; architectural decisions as new ADRs.
