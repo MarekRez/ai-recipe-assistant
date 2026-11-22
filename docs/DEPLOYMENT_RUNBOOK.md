@@ -23,7 +23,7 @@
 
    ```toml
    GEMINI_API_KEY = "..."
-   GEMINI_MODEL = "gemini-2.5-flash"
+   GEMINI_MODEL = "gemini-3.6-flash"
    NOTION_API_KEY = "..."
    NOTION_DATA_SOURCE_ID = "..."
    ```

@@ -68,7 +68,7 @@ Set up the Notion database first: `docs/NOTION_SETUP.md`.
 | Variable                | Purpose                                                      |
 |-------------------------|--------------------------------------------------------------|
 | `GEMINI_API_KEY`        | Google AI Studio key                                         |
-| `GEMINI_MODEL`          | Gemini Flash model id (e.g. `gemini-2.5-flash`)              |
+| `GEMINI_MODEL`          | Gemini Flash model id (e.g. `gemini-3.6-flash`)              |
 | `NOTION_API_KEY`        | Notion internal integration secret                           |
 | `NOTION_DATA_SOURCE_ID` | Notion data source id (not the database id)                  |
 | `APP_ENV`               | `development` / `production` (informational)                 |
