@@ -38,7 +38,12 @@ Rules:
    tell the user the draft is ready for review and must be confirmed with "Save to Notion" in the Add Recipe section.
 6. If a tool returns {"error": ...}, tell the user the error briefly. Do not retry the same call.
 7. Answer concisely in the user's language. For each recipe list the name, total time and category.
+8. The task may start with the earlier conversation. Use it only to understand short follow-ups ("yes",
+   "the second one", "show me the steps"); still get recipe data through tools, never from the earlier answers.
 """
+
+HISTORY_TURNS = 3  # earlier question/answer pairs passed to the agent (short memory, per browser session)
+HISTORY_ANSWER_CHARS = 1500  # long answers (full recipes) are cut - details are fetched again via tools
 
 
 def build_model() -> Model:
@@ -70,17 +75,39 @@ def _is_provider_outage(detail: str) -> bool:
     return any(marker in detail for marker in _OUTAGE_MARKERS)
 
 
+def build_task(question: str, history: list[dict] | None = None) -> str:
+    """Prefix the question with the last few exchanges so follow-ups like "yes" make sense.
+
+    Plain text, so the Gemini agent and the Claude fallback get exactly the same input.
+    """
+    turns = (history or [])[-HISTORY_TURNS:]
+    if not turns:
+        return question
+    lines = ["Earlier conversation (most recent last):"]
+    for turn in turns:
+        answer = turn["answer"]
+        if len(answer) > HISTORY_ANSWER_CHARS:
+            answer = answer[:HISTORY_ANSWER_CHARS] + " [...]"
+        lines += [f"User: {turn['question']}", f"Assistant: {answer}"]
+    lines += ["", f"Current question: {question}"]
+    return "\n".join(lines)
+
+
 def ask_agent_with_provider(
-    question: str, on_draft: Callable[[dict], None] | None = None, model: Model | None = None
+    question: str,
+    on_draft: Callable[[dict], None] | None = None,
+    model: Model | None = None,
+    history: list[dict] | None = None,
 ) -> tuple[str, str]:
     """Run one cookbook question and return (answer, provider).
 
     Gemini first; if Gemini is rate limited or down and ANTHROPIC_API_KEY is set, the whole question is
     answered again by Claude with the same tools (ADR-012) - never a mix of both models in one answer.
     """
+    task = build_task(question, history)
     agent = build_agent(on_draft=on_draft, model=model)
     try:
-        return str(agent.run(question)), "gemini"
+        return str(agent.run(task)), "gemini"
     except AgentError as exc:
         logger.exception("Agent run failed")
         detail = f"{exc} | cause: {exc.__cause__!r}"
@@ -89,10 +116,15 @@ def ask_agent_with_provider(
         if not claude_fallback_enabled():
             raise ServiceError("Gemini rate limit reached or Gemini is unavailable. Try again later.", detail) from exc
         logger.warning("Gemini unavailable - answering with Claude")
-        answer = run_claude_agent(question, make_agent_tools(on_draft), INSTRUCTIONS, MAX_STEPS)
+        answer = run_claude_agent(task, make_agent_tools(on_draft), INSTRUCTIONS, MAX_STEPS)
         return answer, "claude"
 
 
-def ask_agent(question: str, on_draft: Callable[[dict], None] | None = None, model: Model | None = None) -> str:
+def ask_agent(
+    question: str,
+    on_draft: Callable[[dict], None] | None = None,
+    model: Model | None = None,
+    history: list[dict] | None = None,
+) -> str:
     """Run one cookbook question through the agent and return its final answer as text."""
-    return ask_agent_with_provider(question, on_draft=on_draft, model=model)[0]
+    return ask_agent_with_provider(question, on_draft=on_draft, model=model, history=history)[0]

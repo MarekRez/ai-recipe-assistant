@@ -29,9 +29,9 @@ st.set_page_config(page_title="AI Recipe Assistant", page_icon="🍲", layout="w
 state = st.session_state
 state.setdefault("draft", None)
 state.setdefault("draft_version", 0)
-state.setdefault("answer", None)
 state.setdefault("draft_provider", None)
-state.setdefault("answer_provider", None)
+state.setdefault("history", [])  # [{"question", "answer", "provider"}] - short agent memory, this session only
+state.setdefault("pending_question", None)
 state.setdefault("flash", None)
 
 
@@ -196,25 +196,40 @@ st.divider()
 
 st.subheader("Ask My Cookbook")
 st.caption('Examples: "vegetarian meals under 30 minutes", "something with chicken", "I want pasta tonight".')
-question = st.text_input("Question")
-if st.button("Ask Agent"):
-    if not question.strip():
-        st.warning("Please enter a question.")
-    else:
-        staged: list[dict] = []
-        with st.spinner("Agent is working..."):
-            try:
-                state.answer, state.answer_provider = ask_agent_with_provider(question, on_draft=staged.append)
-            except ServiceError as exc:
-                state.answer = None
-                state.answer_provider = None
-                st.error(exc.user_message)
-        if staged:
-            set_draft(staged[-1])
-            state.flash = "The agent prepared a recipe draft - review it in Add Recipe before saving."
-            st.rerun()
 
-if state.answer:
-    st.markdown(state.answer)
-    if state.answer_provider == "claude":
-        st.caption(CLAUDE_NOTE)
+
+def submit_question() -> None:
+    # Runs before the rerun: take the text and clear the input box for the next question.
+    state.pending_question = state.question_input.strip() or None
+    state.question_input = ""
+
+
+for turn in state.history:
+    with st.chat_message("user"):
+        st.markdown(turn["question"])
+    with st.chat_message("assistant"):
+        st.markdown(turn["answer"])
+        if turn["provider"] == "claude":
+            st.caption(CLAUDE_NOTE)
+
+st.text_input("Question", key="question_input", placeholder="Ask a question or reply to the agent")
+col_ask, col_clear = st.columns([1, 6])
+col_ask.button("Ask Agent", on_click=submit_question)
+if state.history and col_clear.button("Clear conversation"):
+    state.history = []
+    st.rerun()
+
+question, state.pending_question = state.pending_question, None
+if question:
+    staged: list[dict] = []
+    with st.spinner("Agent is working..."):
+        try:
+            answer, provider = ask_agent_with_provider(question, on_draft=staged.append, history=state.history)
+        except ServiceError as exc:
+            st.error(exc.user_message)
+        else:
+            state.history.append({"question": question, "answer": answer, "provider": provider})
+    if staged:
+        set_draft(staged[-1])
+        state.flash = "The agent prepared a recipe draft - review it in Add Recipe before saving."
+    st.rerun()

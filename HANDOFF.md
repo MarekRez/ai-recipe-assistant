@@ -64,4 +64,5 @@ Nothing.
   added the optional Claude fallback (branch `feat/claude-fallback`, built on `feat/evaluation`).
 - Then (branch `feat/evaluation-claude`): full extraction eval and all 5 agent scenarios on Claude Haiku 5.5 -
   all scenarios pass; saved the 7 remaining fixture recipes to Notion (10 total).
+- Then (branch `feat/agent-memory`): the agent keeps a short conversation memory so follow-ups like "yes" work.
 - Left unfinished: nothing. Optional Gemini comparison run; next real item is deployment (9).

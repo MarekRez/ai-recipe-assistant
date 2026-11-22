@@ -122,3 +122,17 @@ def test_agent_model_failure_becomes_service_error():
 
     with pytest.raises(ServiceError, match="rate limit"):
         recipe_agent.ask_agent("anything", model=BrokenModel([]))
+
+
+def test_task_includes_recent_conversation_only():
+    history = [{"question": f"q{i}", "answer": f"a{i}", "provider": "gemini"} for i in range(5)]
+    task = recipe_agent.build_task("yes please", history)
+    assert "q0" not in task and "q1" not in task  # only the last HISTORY_TURNS exchanges
+    assert "User: q4" in task and "Assistant: a4" in task
+    assert task.endswith("Current question: yes please")
+    assert recipe_agent.build_task("hello", []) == "hello"
+
+
+def test_long_answers_are_cut_in_the_history():
+    task = recipe_agent.build_task("next", [{"question": "q", "answer": "x" * 5000, "provider": "claude"}])
+    assert len(task) < 2000 and "[...]" in task

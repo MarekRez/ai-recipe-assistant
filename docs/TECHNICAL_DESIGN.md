@@ -37,6 +37,7 @@ Layering rule: `services/*` import neither Streamlit nor smolagents.
 2. UI shows the draft in an editable form; nothing is saved yet.
 3. On "Save to Notion", the edited values are validated by `Recipe` again and saved via `save_recipe`.
 4. Questions go to `ask_agent`, which calls `search_recipes` / `get_recipe` (or `parse_recipe` to stage a draft).
+   The session's last 3 question/answer pairs are passed along (`st.session_state.history`) for follow-ups.
 
 ## Error Handling Strategy
 

@@ -72,6 +72,16 @@ Chronological log of important AI-related implementation decisions, experiments,
 - Next: when Gemini quota is available, optionally re-run `--only 03,06,07,11` and the scenarios on Gemini for a
   complete side-by-side comparison; deployment (item 9).
 
+## 2026-11-22 - Agent Short Memory
+
+- Context: Manual test: the agent ended with "Would you like the ingredients and steps?", but every question was a
+  fresh run, so replying "yes" got "I don't have the recipe you mean yet".
+- Change: the Ask My Cookbook section is now a conversation (this browser session only). `build_task()` passes the
+  last 3 exchanges (answers cut at 1500 chars) as plain text, so Gemini and the Claude fallback get the same input;
+  instruction 8 says to use them only to resolve follow-ups and still fetch data via tools. Input clears after
+  sending; "Clear conversation" resets.
+- Result: live (Claude Haiku): "any breakfast recipes?" -> Fluffy Pancakes; "yes" -> full pancake recipe.
+
 ## Log Entry Template
 
 ```

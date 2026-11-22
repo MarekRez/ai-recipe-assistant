@@ -9,6 +9,10 @@ endpoint (`agent/recipe_agent.py`). `max_steps = 4` because every step is one ra
 If Gemini is rate limited or down and `ANTHROPIC_API_KEY` is set, the whole question is answered again by Claude
 (`agent/claude_agent.py`) with the same tools, instructions and step limit (ADR-012). Still no save tool.
 
+Short memory: the UI keeps the conversation of the current browser session; `build_task()` prefixes each
+question with the last 3 exchanges (long answers cut), so replies like "yes" or "the second one" work.
+Recipe data is still fetched through tools, never taken from earlier answers. "Clear conversation" resets it.
+
 ## Agent Tools (`agent/tools.py`)
 
 All arguments and return values are JSON-compatible. Tools never raise to the agent; failures are returned as
