@@ -7,12 +7,13 @@ This file is **overwritten**, not appended - history lives in git log and `AI_LO
 
 - MVP code is complete and covered by an offline test suite (`python -m pytest`, 79 tests, all passing).
 - **Never run against live Gemini / Notion yet.** No credentials were available in the dev environment.
-- Current piece of work: branch `feat/mvp-core` (Marek). Ready to merge into `main`.
+- `feat/mvp-core` is merged into `main` (PR #1).
+- Current piece of work: branch `feat/live-integration` - Next Up items 3-5.
 
 ## Next Up (in priority order)
 
-1. [ ] Merge `feat/mvp-core` into `main`, push, delete the branch (finishes the current piece).
-2. [ ] Decide the open questions below (shared Notion database, Gemini keys).
+1. [x] Merge `feat/mvp-core` into `main`, push, delete the branch (finishes the current piece).
+2. [x] Decide the open questions (shared Notion database, Gemini keys) - see Decisions.
 3. [ ] Create the Notion integration + database per `docs/NOTION_SETUP.md`; sidebar "Check Notion database" passes.
 4. [ ] Verify the current free-tier Flash model id in Google AI Studio and set `GEMINI_MODEL` (`.env.example` says `gemini-2.5-flash`, not verified).
 5. [ ] Live smoke test: paste recipe -> review -> save -> ask agent. Fix what breaks (first live run of Notion writes and Gemini tool calling).
@@ -29,9 +30,13 @@ Nothing.
 
 ## Open Questions (need a human decision)
 
-- **Shared Notion database?** Recommendation: one shared integration + database for the team (everyone demos the same cookbook); the Notion secret and data source id are shared privately (never in git).
-- **Gemini keys:** recommendation: each teammate uses their own AI Studio key (free-tier quota is per project).
 - Who owns the Streamlit Community Cloud deployment?
+
+## Decisions
+
+- **One shared Notion integration + database** for the whole team (everyone demos the same cookbook). The Notion secret
+  and data source id are shared privately between teammates, never in git.
+- **Gemini keys:** each teammate uses their own Google AI Studio key (free-tier quota is per project).
 
 ## Gotchas (not yet promoted to CLAUDE.md / AGENTS.md)
 
