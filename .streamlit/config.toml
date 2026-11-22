@@ -1,0 +1,8 @@
+# App look (applies locally and on Streamlit Community Cloud). Secrets go in secrets.toml, never here.
+[theme]
+base = "light"
+primaryColor = "#2E7D32"            # buttons, links, focus - leaf green
+backgroundColor = "#F7FBF5"         # page
+secondaryBackgroundColor = "#E4F2DF" # sidebar, inputs, chat bubbles
+textColor = "#1C2B1D"
+font = "sans serif"

@@ -70,4 +70,6 @@ Nothing.
   `feat/agent-memory`, `feat/deploy`, all merged): eval answer key review, eval fixes, optional Claude fallback,
   full eval + agent scenarios on Claude Haiku, short agent memory, Enter-to-submit, password screen for deployment.
   Deployment attempt from MLabska's Streamlit account failed with 403 (needs repo admin) - handed to Marek.
+  Then (branch `feat/ui-theme`): green theme in `.streamlit/config.toml`, emoji headings, chef avatar,
+  "Agent is cooking..." spinner, green primary buttons.
 - Left unfinished: nothing; deployment is item 1 for Marek.

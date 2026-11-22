@@ -32,10 +32,10 @@ state = st.session_state
 # --- Password screen (ADR-013): only when APP_PASSWORD is set, e.g. on Streamlit Community Cloud ---------
 password = app_password()
 if password and not state.get("authenticated"):
-    st.title("AI Recipe Knowledge Assistant")
+    st.title("🍲 AI Recipe Assistant")
     with st.form("login", border=False):
         entered = st.text_input("Password", type="password")
-        if st.form_submit_button("Enter"):
+        if st.form_submit_button("Enter", type="primary"):
             if hmac.compare_digest(entered.encode(), password.encode()):
                 state.authenticated = True
                 st.rerun()
@@ -98,7 +98,8 @@ with st.sidebar:
             else:
                 st.success("Notion database matches docs/NOTION_SETUP.md.")
 
-st.title("AI Recipe Knowledge Assistant")
+st.title("🍲 AI Recipe Assistant")
+st.caption("Save recipes from text or a link, then ask your cookbook what to cook.")
 
 if state.flash:
     st.success(state.flash)
@@ -106,14 +107,14 @@ if state.flash:
 
 # --- Add recipe -------------------------------------------------------------------
 
-st.subheader("Add Recipe")
+st.subheader("📝 Add Recipe")
 input_text = st.text_area("Paste recipe text or a recipe URL", height=180)
 
-if st.button("Process Recipe"):
+if st.button("Process Recipe", type="primary"):
     if not input_text.strip():
         st.warning("Please provide recipe text or a URL.")
     else:
-        with st.spinner("Extracting recipe..."):
+        with st.spinner("Reading the recipe... 🥕"):
             try:
                 set_draft(parse_recipe_draft(input_text))
             except ServiceError as exc:
@@ -180,7 +181,7 @@ if draft:
             "source_url": source_url.strip() or None,
         }
         try:
-            with st.spinner("Saving to Notion..."):
+            with st.spinner("Saving to your cookbook... 📒"):
                 result = save_recipe(confirmed)
         except ValidationError as exc:
             st.error("Fix these fields before saving:\n" + format_validation_error(exc))
@@ -195,27 +196,27 @@ st.divider()
 
 # --- Ask the cookbook -------------------------------------------------------------
 
-st.subheader("Ask My Cookbook")
+st.subheader("🧑‍🍳 Ask My Cookbook")
 st.caption('Examples: "vegetarian meals under 30 minutes", "something with chicken", "I want pasta tonight".')
 
 
 for turn in state.history:
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar="🙂"):
         st.markdown(turn["question"])
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar="🧑‍🍳"):
         st.markdown(turn["answer"])
 
 # A form submits on Enter and clears the input afterwards.
 with st.form("ask_form", clear_on_submit=True, border=False):
     question = st.text_input("Question", placeholder="Ask a question or reply to the agent")
-    asked = st.form_submit_button("Ask Agent")
+    asked = st.form_submit_button("Ask Agent", type="primary")
 if state.history and st.button("Clear conversation"):
     state.history = []
     st.rerun()
 
 if asked and question.strip():
     staged: list[dict] = []
-    with st.spinner("Agent is working..."):
+    with st.spinner("Agent is cooking... 🍳"):
         try:
             answer = ask_agent(question.strip(), on_draft=staged.append, history=state.history)
         except ServiceError as exc:
