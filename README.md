@@ -72,6 +72,7 @@ Set up the Notion database first: `docs/NOTION_SETUP.md`.
 | `GEMINI_MODEL`          | Gemini Flash model id (e.g. `gemini-3.6-flash`)              |
 | `ANTHROPIC_API_KEY`     | Optional. Claude fallback when Gemini hits its limit (ADR-012) |
 | `CLAUDE_MODEL`          | Optional. Claude model id, default `claude-haiku-5-5`        |
+| `APP_PASSWORD`          | Optional. Password screen for the deployed app (ADR-013)     |
 | `NOTION_API_KEY`        | Notion internal integration secret                           |
 | `NOTION_DATA_SOURCE_ID` | Notion data source id (not the database id)                  |
 | `APP_ENV`               | `development` / `production` (informational)                 |

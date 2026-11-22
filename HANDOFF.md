@@ -37,7 +37,7 @@ Nothing.
 
 ## Open Questions (need a human decision)
 
-- Who owns the Streamlit Community Cloud deployment?
+- (none)
 
 ## Decisions
 

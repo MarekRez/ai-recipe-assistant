@@ -96,3 +96,27 @@ def test_follow_up_questions_get_the_conversation(monkeypatch):
     next(b for b in at.button if b.label == "Clear conversation").click()
     at.run()
     assert len(at.chat_message) == 0
+
+
+def login(at: AppTest, password: str) -> AppTest:
+    next(t for t in at.text_input if t.label == "Password").input(password)
+    next(b for b in at.button if b.label == "Enter").click()
+    return at.run()
+
+
+def test_password_screen_blocks_the_app(monkeypatch):
+    monkeypatch.setenv("APP_PASSWORD", "s3cret")
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    assert not at.exception
+    assert [t.label for t in at.text_input] == ["Password"]  # nothing else is rendered
+    assert not any(b.label in ("Process Recipe", "Ask Agent") for b in at.button)
+    at = login(at, "wrong")
+    assert any("Wrong password" in e.value for e in at.error)
+    at = login(at, "s3cret")
+    assert not at.exception
+    assert any(b.label == "Ask Agent" for b in at.button)
+
+
+def test_no_password_screen_without_app_password():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    assert not any(t.label == "Password" for t in at.text_input)

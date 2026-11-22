@@ -5,6 +5,7 @@ Flow: paste text/URL -> extract draft -> user reviews/edits -> user confirms sav
 
 from __future__ import annotations
 
+import hmac
 import logging
 
 import pandas as pd
@@ -14,7 +15,7 @@ from pydantic import ValidationError
 
 from agent.recipe_agent import ask_agent
 from agent.tools import parse_recipe_draft, save_recipe
-from services.config import missing_settings
+from services.config import app_password, missing_settings
 from services.errors import ServiceError
 from services.notion_service import check_notion_setup
 
@@ -27,6 +28,19 @@ INGREDIENT_COLUMNS = ["name", "quantity", "unit", "raw"]
 
 st.set_page_config(page_title="AI Recipe Assistant", page_icon="🍲", layout="wide")
 state = st.session_state
+
+# --- Password screen (ADR-013): only when APP_PASSWORD is set, e.g. on Streamlit Community Cloud ---------
+password = app_password()
+if password and not state.get("authenticated"):
+    st.title("AI Recipe Knowledge Assistant")
+    with st.form("login", border=False):
+        entered = st.text_input("Password", type="password")
+        if st.form_submit_button("Enter"):
+            if hmac.compare_digest(entered.encode(), password.encode()):
+                state.authenticated = True
+                st.rerun()
+            st.error("Wrong password.")
+    st.stop()
 state.setdefault("draft", None)
 state.setdefault("draft_version", 0)
 state.setdefault("history", [])  # [{"question", "answer"}] - short agent memory, this session only

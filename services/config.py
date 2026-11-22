@@ -35,3 +35,8 @@ def claude_fallback_enabled() -> bool:
 
 def claude_model() -> str:
     return os.environ.get("CLAUDE_MODEL", "").strip() or CLAUDE_DEFAULT_MODEL
+
+
+def app_password() -> str | None:
+    """Shared password for the deployed app (ADR-013). Unset = no password screen (local development)."""
+    return os.environ.get("APP_PASSWORD", "").strip() or None

@@ -91,3 +91,11 @@
     so metrics describe one model.
 - Why: The Gemini free tier allows ~20 requests per day per model and newer Flash models often return 503 "high
   demand"; a teammate has Claude API credits. Teammates without a Claude key keep the free Gemini-only setup.
+
+## ADR-013: Shared Password for the Deployed App
+
+- Date: 2026-11-22
+- Decision: If `APP_PASSWORD` is set, `app.py` shows only a password screen until the shared password is entered
+  (compared with `hmac.compare_digest`, remembered for the browser session). Unset = no screen (local development).
+- Why: The deployed app holds the team's API keys (Gemini quota, Claude credits) and writes to the shared Notion
+  database. Real user accounts are out of MVP scope; a shared password for the team and the teacher is enough.

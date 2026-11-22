@@ -26,7 +26,7 @@ def _fake_env(monkeypatch):
         monkeypatch.setenv(name, f"test-{name.lower()}")
     # Claude fallback off by default. Set to "" (not deleted) so app.py's load_dotenv() cannot pull a real key
     # from .env into the test process. Tests that need the fallback enable it explicitly.
-    for name in ("ANTHROPIC_API_KEY", "CLAUDE_MODEL"):
+    for name in ("ANTHROPIC_API_KEY", "CLAUDE_MODEL", "APP_PASSWORD"):
         monkeypatch.setenv(name, "")
 
 

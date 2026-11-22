@@ -18,7 +18,8 @@
 ## Streamlit Community Cloud
 
 1. Push the repository to GitHub (`.env` and `.streamlit/secrets.toml` are git-ignored).
-2. Create the app from the repo, main file `app.py`, Python 3.12.
+2. Create the app from the repo (`MarekRez/ai-recipe-assistant`, branch `main`), main file `app.py`;
+   in Advanced settings choose Python 3.12.
 3. Add secrets in the app settings as top-level keys (Streamlit exposes them as environment variables):
 
    ```toml
@@ -28,12 +29,14 @@
    NOTION_DATA_SOURCE_ID = "..."
    # optional Claude fallback (ADR-012) - omit to run on Gemini only
    ANTHROPIC_API_KEY = "..."
+   # password screen (ADR-013) - share it only with the team and the teacher
+   APP_PASSWORD = "..."
    ```
 
 4. Deploy from the main branch and repeat the smoke test.
 
-Note: the deployed app has no login. Anyone with the URL can read and add recipes and spend the Gemini quota -
-share the URL only for the demo.
+Note: there are no user accounts. With `APP_PASSWORD` set, only people who know the shared password can use the
+app (and spend the Gemini quota / Claude credits). Never deploy with API keys but without `APP_PASSWORD`.
 
 ## Monitoring (MVP Level)
 
