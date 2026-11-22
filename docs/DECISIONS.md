@@ -72,3 +72,20 @@
 - Decision: Fetch the page with `requests`; use schema.org `Recipe` JSON-LD if present, otherwise visible text.
   Blocked sites produce a "paste the text instead" message.
 - Why: Most recipe sites embed JSON-LD, which gives clean input and fewer hallucinations.
+
+## ADR-012: Optional Claude Fallback When Gemini Is Unavailable
+
+- Date: 2026-11-22
+- Decision: Gemini stays the primary model. If Gemini returns a rate limit or outage (HTTP 429 / 5xx ->
+  `ProviderUnavailableError`) and `ANTHROPIC_API_KEY` is set, the same extraction request, or the whole agent
+  question, is retried with Claude (`CLAUDE_MODEL`, default `claude-opus-5-5`). Without the key nothing changes.
+  - Extraction: `services/claude_service.py`, same prompt, `Recipe` as structured output, re-validated as usual.
+  - Agent: smolagents has no Anthropic model class (only via LiteLLM, see ADR-010), so `agent/claude_agent.py`
+    runs a small tool loop on the official `anthropic` SDK with the same smolagents tools and instructions.
+    A question is answered by one model only, never a mix. smolagents' own rate-limit retry (minutes of waiting)
+    is turned off when the fallback is configured.
+  - No fallback on non-outage results (`NOT_A_RECIPE`, validation errors, rejected config) - Claude would not
+    change those.
+  - The UI labels Claude answers. The eval pins one provider per run (`--provider`), so metrics describe one model.
+- Why: The Gemini free tier allows ~20 requests per day per model and newer Flash models often return 503 "high
+  demand"; a teammate has Claude API credits. Teammates without a Claude key keep the free Gemini-only setup.

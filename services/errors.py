@@ -13,3 +13,10 @@ class ServiceError(Exception):
         super().__init__(user_message)
         self.user_message = user_message
         self.detail = detail
+
+
+class ProviderUnavailableError(ServiceError):
+    """The LLM provider is rate limited or temporarily down (HTTP 429 / 5xx).
+
+    Says nothing about the input, so the request may be retried with the fallback provider (ADR-012).
+    """

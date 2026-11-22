@@ -12,8 +12,9 @@ from smolagents import Model, OpenAIServerModel, ToolCallingAgent
 from smolagents.monitoring import LogLevel
 from smolagents.utils import AgentError
 
+from agent.claude_agent import run_claude_agent
 from agent.tools import make_agent_tools
-from services.config import get_setting
+from services.config import claude_fallback_enabled, get_setting
 from services.errors import ServiceError
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,9 @@ def build_model() -> Model:
         model_id=get_setting("GEMINI_MODEL"),
         api_base=GEMINI_OPENAI_BASE_URL,
         api_key=get_setting("GEMINI_API_KEY"),
+        # smolagents retries rate limits itself (60 s, then longer, 3 attempts). With the Claude fallback
+        # configured, fail fast and switch instead of keeping the user waiting for minutes.
+        retry=not claude_fallback_enabled(),
     )
 
 
@@ -59,14 +63,36 @@ def build_agent(on_draft: Callable[[dict], None] | None = None, model: Model | N
     )
 
 
-def ask_agent(question: str, on_draft: Callable[[dict], None] | None = None, model: Model | None = None) -> str:
-    """Run one cookbook question through the agent and return its final answer as text."""
+_OUTAGE_MARKERS = ("429", "RateLimit", "RESOURCE_EXHAUSTED", "503", "UNAVAILABLE", "InternalServerError")
+
+
+def _is_provider_outage(detail: str) -> bool:
+    return any(marker in detail for marker in _OUTAGE_MARKERS)
+
+
+def ask_agent_with_provider(
+    question: str, on_draft: Callable[[dict], None] | None = None, model: Model | None = None
+) -> tuple[str, str]:
+    """Run one cookbook question and return (answer, provider).
+
+    Gemini first; if Gemini is rate limited or down and ANTHROPIC_API_KEY is set, the whole question is
+    answered again by Claude with the same tools (ADR-012) - never a mix of both models in one answer.
+    """
     agent = build_agent(on_draft=on_draft, model=model)
     try:
-        return str(agent.run(question))
+        return str(agent.run(question)), "gemini"
     except AgentError as exc:
         logger.exception("Agent run failed")
         detail = f"{exc} | cause: {exc.__cause__!r}"
-        if "429" in detail or "RateLimit" in detail or "RESOURCE_EXHAUSTED" in detail:
-            raise ServiceError("Gemini rate limit reached. Wait a minute and try again.", detail) from exc
-        raise ServiceError("The agent could not answer this request. Try rephrasing it.", detail) from exc
+        if not _is_provider_outage(detail):
+            raise ServiceError("The agent could not answer this request. Try rephrasing it.", detail) from exc
+        if not claude_fallback_enabled():
+            raise ServiceError("Gemini rate limit reached or Gemini is unavailable. Try again later.", detail) from exc
+        logger.warning("Gemini unavailable - answering with Claude")
+        answer = run_claude_agent(question, make_agent_tools(on_draft), INSTRUCTIONS, MAX_STEPS)
+        return answer, "claude"
+
+
+def ask_agent(question: str, on_draft: Callable[[dict], None] | None = None, model: Model | None = None) -> str:
+    """Run one cookbook question through the agent and return its final answer as text."""
+    return ask_agent_with_provider(question, on_draft=on_draft, model=model)[0]

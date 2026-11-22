@@ -26,6 +26,8 @@
    GEMINI_MODEL = "gemini-3.6-flash"
    NOTION_API_KEY = "..."
    NOTION_DATA_SOURCE_ID = "..."
+   # optional Claude fallback (ADR-012) - omit to run on Gemini only
+   ANTHROPIC_API_KEY = "..."
    ```
 
 4. Deploy from the main branch and repeat the smoke test.

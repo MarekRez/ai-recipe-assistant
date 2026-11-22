@@ -6,6 +6,8 @@ Interpret user cookbook requests and decide which backend tool to call, in seque
 
 Implementation: `smolagents.ToolCallingAgent` (no generated-code execution) on Gemini via its OpenAI-compatible
 endpoint (`agent/recipe_agent.py`). `max_steps = 4` because every step is one rate-limited Gemini request.
+If Gemini is rate limited or down and `ANTHROPIC_API_KEY` is set, the whole question is answered again by Claude
+(`agent/claude_agent.py`) with the same tools, instructions and step limit (ADR-012). Still no save tool.
 
 ## Agent Tools (`agent/tools.py`)
 

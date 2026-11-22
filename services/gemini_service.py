@@ -11,7 +11,7 @@ from google.genai import types
 
 from models.recipe import Recipe
 from services.config import get_setting
-from services.errors import ServiceError
+from services.errors import ProviderUnavailableError, ServiceError
 
 logger = logging.getLogger(__name__)
 
@@ -59,10 +59,10 @@ def extract_recipe_structured(raw_text: str) -> dict:
     except genai_errors.APIError as exc:
         logger.exception("Gemini request failed")
         if exc.code == 429:
-            raise ServiceError("Gemini rate limit reached. Wait a minute and try again.", str(exc)) from exc
-        if exc.code in (400, 401, 403):
+            raise ProviderUnavailableError("Gemini rate limit reached. Wait a minute and try again.", str(exc)) from exc
+        if exc.code in (400, 401, 403, 404):
             raise ServiceError("Gemini rejected the request. Check GEMINI_API_KEY and GEMINI_MODEL.", str(exc)) from exc
-        raise ServiceError("Gemini is not reachable right now. Try again later.", str(exc)) from exc
+        raise ProviderUnavailableError("Gemini is not reachable right now. Try again later.", str(exc)) from exc
 
     text = response.text or ""
     try:

@@ -12,6 +12,9 @@ from services.errors import ServiceError
 
 REQUIRED_SETTINGS = ("GEMINI_API_KEY", "GEMINI_MODEL", "NOTION_API_KEY", "NOTION_DATA_SOURCE_ID")
 
+# Optional Claude fallback (ADR-012): used only when Gemini is rate limited or down, and only if a key is set.
+CLAUDE_DEFAULT_MODEL = "claude-opus-5-5"
+
 
 def get_setting(name: str) -> str:
     value = os.environ.get(name, "").strip()
@@ -24,3 +27,11 @@ def get_setting(name: str) -> str:
 
 def missing_settings() -> list[str]:
     return [name for name in REQUIRED_SETTINGS if not os.environ.get(name, "").strip()]
+
+
+def claude_fallback_enabled() -> bool:
+    return bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
+
+
+def claude_model() -> str:
+    return os.environ.get("CLAUDE_MODEL", "").strip() or CLAUDE_DEFAULT_MODEL

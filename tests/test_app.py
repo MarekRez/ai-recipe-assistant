@@ -15,7 +15,7 @@ APP = str(Path(__file__).resolve().parent.parent / "app.py")
 @pytest.fixture
 def saved(monkeypatch):
     calls = []
-    monkeypatch.setattr(tools, "parse_recipe_draft", lambda text: load_expected("05_lentil_soup"))
+    monkeypatch.setattr(tools, "parse_recipe_draft_with_provider", lambda text: (load_expected("05_lentil_soup"), "gemini"))
     monkeypatch.setattr(tools, "save_recipe", lambda recipe: calls.append(recipe) or {"id": "p1", "url": "https://notion.so/p1"})
     return calls
 
@@ -54,9 +54,9 @@ def test_confirmed_edits_are_saved(saved):
 def test_agent_draft_goes_to_review(monkeypatch, saved):
     def fake_ask(question, on_draft=None, model=None):
         on_draft(load_expected("09_guacamole"))
-        return "Draft ready."
+        return "Draft ready.", "gemini"
 
-    monkeypatch.setattr(recipe_agent, "ask_agent", fake_ask)
+    monkeypatch.setattr(recipe_agent, "ask_agent_with_provider", fake_ask)
     at = AppTest.from_file(APP, default_timeout=30).run()
     at.text_input[0].input("Add this guacamole recipe ...")
     next(b for b in at.button if b.label == "Ask Agent").click()
@@ -64,3 +64,13 @@ def test_agent_draft_goes_to_review(monkeypatch, saved):
     assert not at.exception
     assert at.text_input[0].value == "Simple Guacamole"
     assert saved == []
+
+
+def test_claude_answers_are_labelled(monkeypatch):
+    monkeypatch.setattr(recipe_agent, "ask_agent_with_provider", lambda q, on_draft=None, model=None: ("Pasta.", "claude"))
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    at.text_input[0].input("pasta?")
+    next(b for b in at.button if b.label == "Ask Agent").click()
+    at.run()
+    assert not at.exception
+    assert any("Answered by Claude" in c.value for c in at.caption)

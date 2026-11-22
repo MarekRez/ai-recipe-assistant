@@ -16,10 +16,12 @@ User -> Streamlit|
 1. `app.py` - Streamlit UI: recipe input, review/edit form, save confirmation, cookbook question, setup sidebar.
    Drafts live in `st.session_state`.
 2. `agent/recipe_agent.py` - builds the `ToolCallingAgent` (model, tools, instructions, `max_steps`), `ask_agent()`.
+   `agent/claude_agent.py` - Claude fallback tool loop with the same tools and instructions (ADR-012).
 3. `agent/tools.py` - smolagents tools (`search_recipes`, `get_recipe`, `parse_recipe`) and UI functions
    (`parse_recipe_draft`, `save_recipe`). JSON-compatible inputs/outputs.
 4. `services/recipe_parser.py` - text/URL input handling, extraction call, `Recipe` validation.
 5. `services/gemini_service.py` - Gemini (`google-genai`) structured extraction prompt + JSON mode.
+   `services/claude_service.py` - same prompt and schema on Claude, used only as fallback (ADR-012).
 6. `services/url_fetcher.py` - URL fetch, JSON-LD recipe extraction, text fallback.
 7. `services/notion_service.py` - Notion mapping, CRUD, schema check, error translation.
 8. `services/recipe_search.py` - pure deterministic filtering (`filter_recipes`).
@@ -41,5 +43,7 @@ Layering rule: `services/*` import neither Streamlit nor smolagents.
 1. Services catch Gemini/Notion/HTTP errors and raise `ServiceError(user_message, detail)`; details are logged.
 2. Agent tools convert `ServiceError` into `{"error": ...}` so the agent reports instead of retrying.
 3. Agent failures (e.g. rate limits) become `ServiceError` in `ask_agent`.
+   Gemini rate limits / outages raise `ProviderUnavailableError`; if `ANTHROPIC_API_KEY` is set, extraction and
+   agent questions are retried once with Claude and the UI labels the answer (ADR-012).
 4. Validation errors on save block the save and list the offending fields.
 5. Missing configuration is shown in the sidebar; "Check Notion database" validates the property schema.

@@ -24,6 +24,7 @@ See `PROJECT_CONTEXT.md` and `docs/` for source-of-truth details.
 ## Stack
 
 Python 3.12, Streamlit, smolagents (`ToolCallingAgent`), Gemini API (`google-genai` + OpenAI-compatible endpoint),
+optional Claude fallback (`anthropic`),
 Notion API (`notion-client` 3.x), Pydantic.
 
 ## Project Layout
@@ -69,6 +70,8 @@ Set up the Notion database first: `docs/NOTION_SETUP.md`.
 |-------------------------|--------------------------------------------------------------|
 | `GEMINI_API_KEY`        | Google AI Studio key                                         |
 | `GEMINI_MODEL`          | Gemini Flash model id (e.g. `gemini-3.6-flash`)              |
+| `ANTHROPIC_API_KEY`     | Optional. Claude fallback when Gemini hits its limit (ADR-012) |
+| `CLAUDE_MODEL`          | Optional. Claude model id, default `claude-opus-5-5`         |
 | `NOTION_API_KEY`        | Notion internal integration secret                           |
 | `NOTION_DATA_SOURCE_ID` | Notion data source id (not the database id)                  |
 | `APP_ENV`               | `development` / `production` (informational)                 |

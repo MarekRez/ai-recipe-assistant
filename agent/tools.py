@@ -20,7 +20,7 @@ from services.notion_service import (
     save_recipe_to_notion,
     search_recipes_in_notion,
 )
-from services.recipe_parser import parse_recipe_input
+from services.recipe_parser import parse_recipe_input, parse_recipe_input_with_provider
 
 # ---------------------------------------------------------------------------
 # Plain functions (used by the UI and wrapped by the agent tools)
@@ -30,6 +30,12 @@ from services.recipe_parser import parse_recipe_input
 def parse_recipe_draft(text_or_url: str) -> dict:
     """Extract a recipe draft from text or URL. Raises ServiceError."""
     return parse_recipe_input(text_or_url).model_dump()
+
+
+def parse_recipe_draft_with_provider(text_or_url: str) -> tuple[dict, str]:
+    """Like parse_recipe_draft, plus which model produced it ("gemini" or "claude"). Raises ServiceError."""
+    recipe, provider = parse_recipe_input_with_provider(text_or_url)
+    return recipe.model_dump(), provider
 
 
 def save_recipe(recipe: dict) -> dict:

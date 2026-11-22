@@ -24,6 +24,10 @@ def positive_fixture_stems() -> list[str]:
 def _fake_env(monkeypatch):
     for name in ("GEMINI_API_KEY", "GEMINI_MODEL", "NOTION_API_KEY", "NOTION_DATA_SOURCE_ID"):
         monkeypatch.setenv(name, f"test-{name.lower()}")
+    # Claude fallback off by default. Set to "" (not deleted) so app.py's load_dotenv() cannot pull a real key
+    # from .env into the test process. Tests that need the fallback enable it explicitly.
+    for name in ("ANTHROPIC_API_KEY", "CLAUDE_MODEL"):
+        monkeypatch.setenv(name, "")
 
 
 @pytest.fixture

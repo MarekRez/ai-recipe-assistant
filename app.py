@@ -12,9 +12,9 @@ import streamlit as st
 from dotenv import load_dotenv
 from pydantic import ValidationError
 
-from agent.recipe_agent import ask_agent
-from agent.tools import parse_recipe_draft, save_recipe
-from services.config import missing_settings
+from agent.recipe_agent import ask_agent_with_provider
+from agent.tools import parse_recipe_draft_with_provider, save_recipe
+from services.config import claude_fallback_enabled, missing_settings
 from services.errors import ServiceError
 from services.notion_service import check_notion_setup
 
@@ -30,11 +30,17 @@ state = st.session_state
 state.setdefault("draft", None)
 state.setdefault("draft_version", 0)
 state.setdefault("answer", None)
+state.setdefault("draft_provider", None)
+state.setdefault("answer_provider", None)
 state.setdefault("flash", None)
 
 
-def set_draft(draft: dict | None) -> None:
+CLAUDE_NOTE = "Answered by Claude - Gemini's free limit was reached or Gemini was unavailable."
+
+
+def set_draft(draft: dict | None, provider: str | None = None) -> None:
     state.draft = draft
+    state.draft_provider = provider
     state.draft_version += 1  # forces fresh form widgets for a new draft
 
 
@@ -73,6 +79,11 @@ with st.sidebar:
         st.error("Missing configuration: " + ", ".join(f"`{m}`" for m in missing))
     else:
         st.success("Configuration loaded.")
+    st.caption(
+        "Claude fallback: **on** (used only when Gemini hits its limit)"
+        if claude_fallback_enabled()
+        else "Claude fallback: off (set `ANTHROPIC_API_KEY` to enable)"
+    )
     if st.button("Check Notion database", disabled=bool(missing)):
         try:
             problems = check_notion_setup()
@@ -101,7 +112,7 @@ if st.button("Process Recipe"):
     else:
         with st.spinner("Extracting recipe..."):
             try:
-                set_draft(parse_recipe_draft(input_text))
+                set_draft(*parse_recipe_draft_with_provider(input_text))
             except ServiceError as exc:
                 st.error(exc.user_message)
 
@@ -110,6 +121,8 @@ if draft:
     v = state.draft_version
     st.markdown("#### Review before saving")
     st.caption("Check every field. Empty means the source did not state it - leave it empty rather than guessing.")
+    if state.draft_provider == "claude":
+        st.caption(CLAUDE_NOTE)
     with st.form(f"review_{v}"):
         name = st.text_input("Name", value=draft.get("name") or "")
         col1, col2, col3 = st.columns(3)
@@ -191,9 +204,10 @@ if st.button("Ask Agent"):
         staged: list[dict] = []
         with st.spinner("Agent is working..."):
             try:
-                state.answer = ask_agent(question, on_draft=staged.append)
+                state.answer, state.answer_provider = ask_agent_with_provider(question, on_draft=staged.append)
             except ServiceError as exc:
                 state.answer = None
+                state.answer_provider = None
                 st.error(exc.user_message)
         if staged:
             set_draft(staged[-1])
@@ -202,3 +216,5 @@ if st.button("Ask Agent"):
 
 if state.answer:
     st.markdown(state.answer)
+    if state.answer_provider == "claude":
+        st.caption(CLAUDE_NOTE)
