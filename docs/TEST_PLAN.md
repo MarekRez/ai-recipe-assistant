@@ -27,9 +27,11 @@ Run: `.venv/Scripts/python -m pytest`. No test calls Gemini or Notion.
 | `test_app.py`              | Streamlit review-before-save flow (AppTest)                           |
 | `test_eval_scoring.py`     | eval metric logic                                                     |
 
-## Live Extraction Eval (Gemini, manual)
+## Live Extraction Eval (manual)
 
 Run: `.venv/Scripts/python -m evals.run_extraction_eval --out evals/results/<date>.json`
+(`--provider claude` evaluates the Claude fallback instead of Gemini; one model per run, ADR-012).
+Rows that hit a rate limit / outage are shown as SKIP and left out of every metric.
 
 Metrics:
 

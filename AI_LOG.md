@@ -53,6 +53,25 @@ Chronological log of important AI-related implementation decisions, experiments,
   25 minutes" as cook time.
 - Next: re-run the 4 skipped cases on Gemini; optionally a full `--provider claude` run for comparison.
 
+## 2026-11-22 - Evaluation on Claude Haiku 5.5 (HANDOFF items 7-8)
+
+- Context: Gemini free-tier quota exhausted for the day; the team member chose to finish the evaluation on the
+  Claude fallback (`claude-haiku-5-5`). The Gemini run stays partial (7/11, see entry above).
+- Extraction eval (`--provider claude`, 11 cases, 0 skipped): schema validity 100 %, name 100 %, ingredient
+  recall/precision 100 %, quantities 100 %, units 100 %, times 90 %, vegetarian 100 %, category 9/10,
+  hallucination-free 90 %, negative case 1/1. Only slip: lentil soup cook time 25 from "simmer for 25 minutes"
+  (same as Gemini). Guacamole category left null (prompt allows null when unclear; answer key says Snack).
+- Notion: the 7 missing fixture recipes were saved from their reviewed expected JSON (10 recipes in total).
+- Agent scenarios (docs/TEST_PLAN.md, Claude tool loop), all 5 pass, one tool call each, 2-3 s:
+  - "vegetarian meals under 30 minutes" -> search_recipes(vegetarian=true, max_time=30) -> Guacamole, Mug Cake,
+    Pancakes, Tomato Pasta (expected 4/4).
+  - "something with chicken" -> search_recipes(ingredient="chicken") -> Easy Chicken Curry.
+  - "I want pasta tonight" -> search_recipes(text_query="pasta") -> Quick Vegetarian Tomato Pasta.
+  - "dinner ideas" -> search_recipes(category="Main course") -> all 5 main courses.
+  - "how do I make the salmon?" -> get_recipe("salmon") -> full Oven-Baked Lemon Salmon recipe.
+- Next: when Gemini quota is available, optionally re-run `--only 03,06,07,11` and the scenarios on Gemini for a
+  complete side-by-side comparison; deployment (item 9).
+
 ## Log Entry Template
 
 ```

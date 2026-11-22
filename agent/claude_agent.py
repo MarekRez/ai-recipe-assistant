@@ -44,6 +44,7 @@ def to_anthropic_tool(tool: Tool) -> dict:
 def _run_tool(tool: Tool | None, name: str, args: dict) -> tuple[str, bool]:
     if tool is None:
         return json.dumps({"error": f"Unknown tool {name}"}), True
+    logger.info("Claude tool call: %s(%s)", name, json.dumps(args, ensure_ascii=False))
     try:
         result = tool.forward(**args)
     except Exception as exc:  # tools normally return {"error": ...}; this guards against bad arguments

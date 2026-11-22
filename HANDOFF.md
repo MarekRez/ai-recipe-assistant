@@ -12,7 +12,7 @@ This file is **overwritten**, not appended - history lives in git log and `AI_LO
   extraction and agent questions are answered by Claude Haiku 5.5 (labelled in the UI). Verified live 2026-11-22.
   Without the key nothing changes - teammates do not need one.
 - Shared Notion database "Recipes" lives on the page "Recipe Assistant (app data)" in the team workspace;
-  only that page is connected to the "Cooking Agent" integration. It holds 3 test recipes (tomato pasta, greek salad, lentil soup).
+  only that page is connected to the "Cooking Agent" integration. It holds the 10 fixture recipes (sample cookbook for the demo).
 
 ## Next Up (in priority order)
 
@@ -22,14 +22,14 @@ This file is **overwritten**, not appended - history lives in git log and `AI_LO
 4. [x] Verify the free-tier Flash model id -> `gemini-3.6-flash` (see Gotchas).
 5. [x] Live smoke test: paste recipe -> review -> save -> ask agent. Fixed: genai client closed mid-request.
 6. [x] Manually review expected outputs in `tests/fixtures/recipes/*.json` (written by an AI assistant - they are the eval ground truth).
-7. [ ] Run `python -m evals.run_extraction_eval --out evals/results/<date>.json`, record metrics in `AI_LOG.md`.
-   Partial run 2026-11-22: 7/11 scored, 4 skipped (quota) - re-run `--only 03,06,07,11`. Optionally also
-   `--provider claude` for a Gemini vs. Claude comparison in the report.
-8. [ ] Run the manual agent scenarios from `docs/TEST_PLAN.md`, record results in `AI_LOG.md`.
+7. [x] Run `python -m evals.run_extraction_eval --out evals/results/<date>.json`, record metrics in `AI_LOG.md`.
+   Done on Claude Haiku 5.5 (11/11, results in `AI_LOG.md`). Gemini run is partial (7/11, quota) - optional:
+   re-run `--only 03,06,07,11` on Gemini for a full side-by-side comparison.
+8. [x] Run the manual agent scenarios from `docs/TEST_PLAN.md`, record results in `AI_LOG.md`.
 9. [ ] Deploy to Streamlit Community Cloud (`docs/DEPLOYMENT_RUNBOOK.md`).
-10. [ ] Optional: before the demo, delete the 3 test recipes from Notion (or keep them as sample data).
+10. [ ] Optional: decide whether the 10 fixture recipes stay as demo data in Notion.
 
-Items 6-8 are the next piece of work ("evaluation").
+Next piece of work: deployment (item 9); the open question "who owns the deployment" needs an answer first.
 
 ## In Progress / Half-Done
 
@@ -62,4 +62,6 @@ Nothing.
 - Same day, MLabska + Claude Code: reviewed the eval answer key (Step 6, no changes; pancakes=Breakfast and
   guacamole=Snack kept as judgment calls), partial eval run, fixed the eval scoring outages as results,
   added the optional Claude fallback (branch `feat/claude-fallback`, built on `feat/evaluation`).
-- Left unfinished: Step 7 needs 4 more cases (Gemini quota), Step 8 not started.
+- Then (branch `feat/evaluation-claude`): full extraction eval and all 5 agent scenarios on Claude Haiku 5.5 -
+  all scenarios pass; saved the 7 remaining fixture recipes to Notion (10 total).
+- Left unfinished: nothing. Optional Gemini comparison run; next real item is deployment (9).
