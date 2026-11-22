@@ -32,7 +32,7 @@ state = st.session_state
 # --- Password screen (ADR-013): only when APP_PASSWORD is set, e.g. on Streamlit Community Cloud ---------
 password = app_password()
 if password and not state.get("authenticated"):
-    st.title("🍲 AI Recipe Assistant")
+    st.title("AI Recipe Assistant")
     with st.form("login", border=False):
         entered = st.text_input("Password", type="password")
         if st.form_submit_button("Enter", type="primary"):
@@ -98,7 +98,7 @@ with st.sidebar:
             else:
                 st.success("Notion database matches docs/NOTION_SETUP.md.")
 
-st.title("🍲 AI Recipe Assistant")
+st.title("AI Recipe Assistant")
 st.caption("Save recipes from text or a link, then ask your cookbook what to cook.")
 
 if state.flash:
@@ -107,7 +107,7 @@ if state.flash:
 
 # --- Add recipe -------------------------------------------------------------------
 
-st.subheader("📝 Add Recipe")
+st.subheader("Add Recipe")
 input_text = st.text_area("Paste recipe text or a recipe URL", height=180)
 
 if st.button("Process Recipe", type="primary"):
@@ -196,12 +196,12 @@ st.divider()
 
 # --- Ask the cookbook -------------------------------------------------------------
 
-st.subheader("🧑‍🍳 Ask My Cookbook")
+st.subheader("Ask My Cookbook")
 st.caption('Examples: "vegetarian meals under 30 minutes", "something with chicken", "I want pasta tonight".')
 
 
 for turn in state.history:
-    with st.chat_message("user", avatar="🙂"):
+    with st.chat_message("user"):
         st.markdown(turn["question"])
     with st.chat_message("assistant", avatar="🧑‍🍳"):
         st.markdown(turn["answer"])
