@@ -86,7 +86,3 @@ def score_case(expected: Recipe, actual: Recipe) -> dict:
 def is_hallucination_free(score: dict) -> bool:
     return not score["extra_ingredients"] and not score["invented_times"] and score["invented_quantities"] == 0
 
-
-def is_api_failure(error: str | None) -> bool:
-    """True for Gemini outages / rate limits (services.gemini_service messages), not for extraction results."""
-    return bool(error) and error.startswith("Gemini ")

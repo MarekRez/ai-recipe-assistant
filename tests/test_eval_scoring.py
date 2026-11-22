@@ -1,7 +1,7 @@
 import pytest
 """Scoring logic of the live extraction eval."""
 
-from evals.scoring import is_api_failure, is_hallucination_free, names_match, norm_unit, score_case
+from evals.scoring import is_hallucination_free, names_match, norm_unit, score_case
 from models.recipe import Recipe
 from tests.conftest import load_expected
 
@@ -35,16 +35,3 @@ def test_name_and_unit_normalisation():
     assert norm_unit("cup") == norm_unit("cups")
     assert norm_unit(None) is None
 
-
-@pytest.mark.parametrize(
-    "error, expected",
-    [
-        ("Gemini rate limit reached. Wait a minute and try again.", True),
-        ("Gemini is not reachable right now. Try again later.", True),
-        ("No recipe found in the given text.", False),
-        ("The extracted recipe did not pass validation. Try again or edit the input.", False),
-        (None, False),
-    ],
-)
-def test_api_failures_are_not_scored_as_extraction_results(error, expected):
-    assert is_api_failure(error) is expected

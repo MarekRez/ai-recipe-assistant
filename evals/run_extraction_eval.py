@@ -18,9 +18,10 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from evals.scoring import is_api_failure, is_hallucination_free, score_case
+from evals.scoring import is_hallucination_free, score_case
 from models.recipe import Recipe
-from services.errors import ServiceError
+from services.config import claude_model, get_setting
+from services.errors import ProviderUnavailableError, ServiceError
 from services.recipe_parser import NOT_A_RECIPE_MESSAGE, parse_recipe
 
 FIXTURES = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "recipes"
@@ -35,6 +36,10 @@ def main() -> int:
     parser.add_argument("--delay", type=float, default=6.0, help="seconds between Gemini calls (rate limit)")
     parser.add_argument("--only", default="", help="comma-separated fixture prefixes, e.g. 01,05")
     parser.add_argument("--out", default="", help="optional path for JSON results")
+    parser.add_argument(
+        "--provider", choices=("gemini", "claude"), default="gemini",
+        help="model to evaluate; never switches mid-run, so the metrics describe one model (ADR-012)",
+    )
     args = parser.parse_args()
     load_dotenv()
 
@@ -50,13 +55,14 @@ def main() -> int:
         expected_raw = json.loads(txt.with_suffix(".json").read_text(encoding="utf-8"))
         row: dict = {"case": txt.stem}
         try:
-            actual = parse_recipe(txt.read_text(encoding="utf-8"))
+            actual = parse_recipe(txt.read_text(encoding="utf-8"), provider=args.provider)
             row["schema_valid"] = True
         except ServiceError as exc:
             actual = None
             row["schema_valid"] = False
             row["error"] = exc.user_message
-        if is_api_failure(row.get("error")):
+            row["provider_unavailable"] = isinstance(exc, ProviderUnavailableError)
+        if row.get("provider_unavailable"):
             # Rate limit / outage says nothing about extraction quality - leave the case out of every metric.
             row["skipped"] = True
         elif expected_raw.get("expect_error"):
@@ -76,6 +82,8 @@ def main() -> int:
         return sum(float(r[key]) for r in scored) / len(scored) if scored else 0.0
 
     summary = {
+        "provider": args.provider,
+        "model": get_setting("GEMINI_MODEL") if args.provider == "gemini" else claude_model(),
         "cases": len(rows),
         "skipped_api_errors": sum(bool(r.get("skipped")) for r in rows),
         "schema_valid_rate": sum(r["schema_valid"] for r in positives) / len(positives) if positives else 0.0,
