@@ -18,10 +18,10 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from evals.scoring import is_hallucination_free, score_case
+from evals.scoring import is_api_failure, is_hallucination_free, score_case
 from models.recipe import Recipe
 from services.errors import ServiceError
-from services.recipe_parser import parse_recipe
+from services.recipe_parser import NOT_A_RECIPE_MESSAGE, parse_recipe
 
 FIXTURES = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "recipes"
 
@@ -56,17 +56,20 @@ def main() -> int:
             actual = None
             row["schema_valid"] = False
             row["error"] = exc.user_message
-        if expected_raw.get("expect_error"):
-            row["negative_case_ok"] = actual is None
+        if is_api_failure(row.get("error")):
+            # Rate limit / outage says nothing about extraction quality - leave the case out of every metric.
+            row["skipped"] = True
+        elif expected_raw.get("expect_error"):
+            row["negative_case_ok"] = row.get("error") == NOT_A_RECIPE_MESSAGE
         elif actual is not None:
             score = score_case(Recipe.model_validate(expected_raw), actual)
             row.update(score, hallucination_free=is_hallucination_free(score), actual=actual.model_dump())
         rows.append(row)
-        status = "OK " if row.get("schema_valid") or row.get("negative_case_ok") else "ERR"
+        status = "SKIP" if row.get("skipped") else "OK " if row.get("schema_valid") or row.get("negative_case_ok") else "ERR"
         print(f"[{status}] {txt.stem}", row.get("error", ""), flush=True)
 
     scored = [r for r in rows if "ingredient_recall" in r]
-    positives = [r for r in rows if "negative_case_ok" not in r]
+    positives = [r for r in rows if "negative_case_ok" not in r and not r.get("skipped")]
     negatives = [r for r in rows if "negative_case_ok" in r]
 
     def avg(key: str) -> float:
@@ -74,6 +77,7 @@ def main() -> int:
 
     summary = {
         "cases": len(rows),
+        "skipped_api_errors": sum(bool(r.get("skipped")) for r in rows),
         "schema_valid_rate": sum(r["schema_valid"] for r in positives) / len(positives) if positives else 0.0,
         "name_accuracy": avg("name_ok"),
         "ingredient_recall": avg("ingredient_recall"),

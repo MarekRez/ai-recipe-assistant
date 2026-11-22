@@ -14,6 +14,7 @@ from services.url_fetcher import fetch_recipe_text, is_url
 logger = logging.getLogger(__name__)
 
 NOT_A_RECIPE = "NOT_A_RECIPE"
+NOT_A_RECIPE_MESSAGE = "No recipe found in the given text."
 
 
 def parse_recipe(raw_text: str, source_url: str | None = None) -> Recipe:
@@ -25,7 +26,7 @@ def parse_recipe(raw_text: str, source_url: str | None = None) -> Recipe:
         raise ServiceError("Recipe text is empty.")
     payload = extract_recipe_structured(raw_text)
     if payload.get("name") == NOT_A_RECIPE:
-        raise ServiceError("No recipe found in the given text.")
+        raise ServiceError(NOT_A_RECIPE_MESSAGE)
     if source_url:
         payload["source_url"] = source_url
     try:
