@@ -18,10 +18,6 @@ from services.gemini_service import EXTRACTION_PROMPT
 
 logger = logging.getLogger(__name__)
 
-# Server-side refusal fallback: if a safety classifier declines, the API re-runs the request on a fallback model.
-FALLBACK_BETA = "server-side-fallback-2026-07-01"
-
-
 def _client() -> anthropic.Anthropic:
     # Reads ANTHROPIC_API_KEY from the environment.
     return anthropic.Anthropic()
@@ -31,11 +27,9 @@ def extract_recipe_structured(raw_text: str) -> dict:
     """Return Claude's structured extraction payload as a dict (validated again by the caller)."""
     client = _client()
     try:
-        response = client.beta.messages.parse(
+        response = client.messages.parse(
             model=claude_model(),
             max_tokens=16000,
-            betas=[FALLBACK_BETA],
-            fallbacks="default",
             messages=[{"role": "user", "content": EXTRACTION_PROMPT + raw_text}],
             output_format=Recipe,
         )

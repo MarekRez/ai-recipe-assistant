@@ -78,7 +78,8 @@
 - Date: 2026-11-22
 - Decision: Gemini stays the primary model. If Gemini returns a rate limit or outage (HTTP 429 / 5xx ->
   `ProviderUnavailableError`) and `ANTHROPIC_API_KEY` is set, the same extraction request, or the whole agent
-  question, is retried with Claude (`CLAUDE_MODEL`, default `claude-opus-5-5`). Without the key nothing changes.
+  question, is retried with Claude (`CLAUDE_MODEL`, default `claude-haiku-5-5`). Without the key nothing changes.
+  Haiku is enough for schema extraction and three simple tools and costs a fraction of the larger models.
   - Extraction: `services/claude_service.py`, same prompt, `Recipe` as structured output, re-validated as usual.
   - Agent: smolagents has no Anthropic model class (only via LiteLLM, see ADR-010), so `agent/claude_agent.py`
     runs a small tool loop on the official `anthropic` SDK with the same smolagents tools and instructions.

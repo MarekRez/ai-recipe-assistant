@@ -98,7 +98,7 @@ def _claude_client(response, sent=None):
             sent.update(kwargs)
         return response
 
-    return SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(parse=parse)))
+    return SimpleNamespace(messages=SimpleNamespace(parse=parse))
 
 
 def test_claude_refusal_is_a_service_error(monkeypatch):
@@ -116,7 +116,7 @@ def test_claude_request_has_no_sampling_params(monkeypatch):
     monkeypatch.setattr(claude_service, "_client", lambda: _claude_client(response, sent))
     assert claude_service.extract_recipe_structured("text") == {"name": "X"}
     assert not {"temperature", "top_p", "top_k"} & sent.keys()
-    assert sent["model"] == "claude-opus-5-5"
+    assert sent["model"] == "claude-haiku-5-5"
 
 
 # --- agent -------------------------------------------------------------------------
@@ -147,7 +147,7 @@ def test_claude_agent_runs_tools_then_answers(monkeypatch):
         requests.append({**kwargs, "messages": list(kwargs["messages"])})  # snapshot: the loop keeps appending
         return turns[len(requests) - 1]
 
-    client = SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(create=create)))
+    client = SimpleNamespace(messages=SimpleNamespace(create=create))
     monkeypatch.setattr(claude_agent.anthropic, "Anthropic", lambda: client)
     answer = claude_agent.run_claude_agent("veggie?", make_agent_tools(), "rules", max_steps=4)
     assert answer == "Pasta, 25 min."

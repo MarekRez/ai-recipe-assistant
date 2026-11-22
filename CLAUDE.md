@@ -44,7 +44,7 @@ Source of truth, in order: `PROJECT_CONTEXT.md` > `docs/*` > code. If they disag
 4. **Agent model**: `OpenAIServerModel` against `https://generativelanguage.googleapis.com/v1beta/openai/` (needs `smolagents[openai]`, no LiteLLM). `ToolCallingAgent`, `max_steps=4` - every step is one rate-limited Gemini request.
 5. **google-genai 3.x client lifetime**: the `Client` closes its HTTP client when garbage-collected. Keep it in a variable for the whole request - never `genai.Client(...).models.generate_content(...)` in one expression.
 6. **Gemini model ids churn** (checked 2026-11-22): `gemini-2.5-flash` is closed to new keys (404); newest Flash models often return 503 "high demand". If `GEMINI_MODEL` fails, list models (`client.models.list()`) and try an older Flash.
-7. **anthropic 2.x = API version 2026-10-21**: `temperature`/`top_p`/`top_k` return 400 - never send them. `claude-opus-5-5`: thinking is always on, forced `tool_choice` returns 400 (use `auto`), append `response.content` unchanged in tool loops. Refusal fallback via `betas=["server-side-fallback-2026-07-01"]`, `fallbacks="default"` on `client.beta.messages.*`.
+7. **anthropic 2.x = API version 2026-10-21**: `temperature`/`top_p`/`top_k` return 400 - never send them. Default `claude-haiku-5-5`: thinking is on by default; use `tool_choice` `auto`; append `response.content` unchanged in tool loops. Haiku has no server-side refusal fallback, so do not send `fallbacks`.
 8. **smolagents `ApiModel` retries rate limits itself** (60 s, exponential, 3 attempts). Pass `retry=False` when you want to fail fast.
 9. **Streamlit `st.data_editor`**: all-`None` text columns become float and break `TextColumn` - cast to `"string"` dtype; edited cells come back as `pd.NA`/`NaN`, normalize to `None`.
 

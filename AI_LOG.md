@@ -48,7 +48,9 @@ Chronological log of important AI-related implementation decisions, experiments,
 - Change: the eval counted a rate-limited negative case as passed - outages are now skipped, not scored.
   Added an optional Claude fallback (ADR-012) for extraction and agent questions; `--provider` pins the eval
   to one model. Live check: with Gemini over quota, extraction (5-9 s) and agent answers (~7 s) came from
-  claude-opus-5-5; it did not invent the lentil soup cook time.
+  claude-opus-5-5; it did not invent the lentil soup cook time. Default then changed to claude-haiku-5-5 (much
+  cheaper): re-checked live - extraction ~5.5 s, agent ~4.5 s, all correct; like Gemini it reads "simmer for
+  25 minutes" as cook time.
 - Next: re-run the 4 skipped cases on Gemini; optionally a full `--provider claude` run for comparison.
 
 ## Log Entry Template

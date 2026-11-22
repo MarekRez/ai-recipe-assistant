@@ -14,7 +14,6 @@ import logging
 import anthropic
 from smolagents import Tool
 
-from services.claude_service import FALLBACK_BETA
 from services.config import claude_model
 from services.errors import ProviderUnavailableError, ServiceError
 
@@ -62,11 +61,9 @@ def run_claude_agent(question: str, tools: list[Tool], instructions: str, max_st
 
     for _ in range(max_steps):
         try:
-            response = client.beta.messages.create(
+            response = client.messages.create(
                 model=claude_model(),
                 max_tokens=16000,
-                betas=[FALLBACK_BETA],
-                fallbacks="default",
                 system=instructions,
                 tools=tool_defs,
                 messages=messages,
