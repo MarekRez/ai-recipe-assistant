@@ -23,6 +23,21 @@ Chronological log of important AI-related implementation decisions, experiments,
 - Next: Fill `.env`, create the Notion database (`docs/NOTION_SETUP.md`), run the app end-to-end, run
   `python -m evals.run_extraction_eval` and record the metrics here.
 
+## 2026-11-22 - Live Integration (first run against Gemini + Notion)
+
+- Context: HANDOFF items 3-5. Team decision: one shared Notion database, one Gemini key per teammate.
+- Change: Created the "Recipes" Notion database via the API with the exact `PROPERTY_SCHEMA` (schema check: 0 problems).
+  Fixed `gemini_service.extract_recipe_structured`: google-genai 3.x closes its HTTP client when the `Client` is
+  garbage-collected, and `_client().models.generate_content(...)` dropped the only reference ("Cannot send a request,
+  as the client has been closed"); added a regression test. Default model changed to `gemini-3.6-flash`.
+- Why: `gemini-2.5-flash` returns 404 for new keys ("no longer available to new users"); `gemini-3.7-flash` and
+  `gemini-3.8-flash` returned 503 "high demand" repeatedly; `gemini-3.6-flash` worked.
+- Result: Extraction from text (2 fixtures) and URL (BBC Good Food, JSON-LD) correct; ranges/"to taste" kept as null.
+  Save to Notion works, Select/Multi-select options are auto-created. Agent answered "vegetarian under 30 minutes",
+  "ingredients for Greek Salad" and "I want a soup" via tool calls through the OpenAI-compatible endpoint.
+  Full UI flow (process -> review -> Save to Notion -> Ask Agent) works. Latency ~20 s per Gemini call.
+- Next: evaluation (HANDOFF items 6-8).
+
 ## Log Entry Template
 
 ```

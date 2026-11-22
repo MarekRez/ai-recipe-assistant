@@ -41,7 +41,9 @@ Source of truth, in order: `PROJECT_CONTEXT.md` > `docs/*` > code. If they disag
 2. **notion-client 3.x = Notion API 2025-09-03**: no `databases.query`. Use `client.data_sources.query(data_source_id=...)`; page parent `{"type": "data_source_id", "data_source_id": ...}`. Rich text item max 2000 chars (we chunk).
 3. **smolagents `@tool`** needs an `Args:` docstring entry for every parameter, and the function source must be in a file. Non-primitive hints become `"object"` - the tool receives a plain `dict`.
 4. **Agent model**: `OpenAIServerModel` against `https://generativelanguage.googleapis.com/v1beta/openai/` (needs `smolagents[openai]`, no LiteLLM). `ToolCallingAgent`, `max_steps=4` - every step is one rate-limited Gemini request.
-5. **Streamlit `st.data_editor`**: all-`None` text columns become float and break `TextColumn` - cast to `"string"` dtype; edited cells come back as `pd.NA`/`NaN`, normalize to `None`.
+5. **google-genai 3.x client lifetime**: the `Client` closes its HTTP client when garbage-collected. Keep it in a variable for the whole request - never `genai.Client(...).models.generate_content(...)` in one expression.
+6. **Gemini model ids churn** (checked 2026-11-22): `gemini-2.5-flash` is closed to new keys (404); newest Flash models often return 503 "high demand". If `GEMINI_MODEL` fails, list models (`client.models.list()`) and try an older Flash.
+7. **Streamlit `st.data_editor`**: all-`None` text columns become float and break `TextColumn` - cast to `"string"` dtype; edited cells come back as `pd.NA`/`NaN`, normalize to `None`.
 
 ## Workflow
 
