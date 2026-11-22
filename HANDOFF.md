@@ -45,6 +45,8 @@ Nothing.
 - `git fetch/push` can fail on Windows with `SSL certificate problem: unable to get local issuer certificate`. Fix: `git config --global http.sslBackend schannel`.
 - The eval makes ~11 Gemini requests per full run (6 s delay between them) - mind the free-tier daily quota.
 - Getting the Notion secret + `NOTION_DATA_SOURCE_ID`: ask a teammate privately (shared database, see Decisions).
+- **Gemini free tier = 20 requests per day per model per key** (`gemini-3.6-flash`, Nov 2026). A full eval is 11
+  requests, an agent question 2-4. Spread testing across teammates' keys / days; failed calls show as SKIP in the eval.
 - Gemini is slow on the free tier: ~20 s per extraction, ~20-40 s per agent question. Not a bug.
 
 ## Last Session
