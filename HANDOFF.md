@@ -7,7 +7,10 @@ This file is **overwritten**, not appended - history lives in git log and `AI_LO
 
 - MVP works end-to-end against **live** Gemini + Notion (verified 2026-11-22, in code and in the Streamlit UI):
   text and URL extraction, review form, save to Notion, agent answers via `search_recipes` / `get_recipe`.
-- Offline test suite: 80 tests, all passing.
+- Offline test suite: 99 tests, all passing.
+- **Optional Claude fallback (ADR-012):** if Gemini hits its limit / is down and `ANTHROPIC_API_KEY` is set,
+  extraction and agent questions are answered by Claude (labelled in the UI). Verified live 2026-11-22.
+  Without the key nothing changes - teammates do not need one.
 - Shared Notion database "Recipes" lives on the page "Recipe Assistant (app data)" in the team workspace;
   only that page is connected to the "Cooking Agent" integration. It holds 3 test recipes (tomato pasta, greek salad, lentil soup).
 
@@ -18,8 +21,10 @@ This file is **overwritten**, not appended - history lives in git log and `AI_LO
 3. [x] Create the Notion integration + database; "Check Notion database" passes.
 4. [x] Verify the free-tier Flash model id -> `gemini-3.6-flash` (see Gotchas).
 5. [x] Live smoke test: paste recipe -> review -> save -> ask agent. Fixed: genai client closed mid-request.
-6. [ ] Manually review expected outputs in `tests/fixtures/recipes/*.json` (written by an AI assistant - they are the eval ground truth).
+6. [x] Manually review expected outputs in `tests/fixtures/recipes/*.json` (written by an AI assistant - they are the eval ground truth).
 7. [ ] Run `python -m evals.run_extraction_eval --out evals/results/<date>.json`, record metrics in `AI_LOG.md`.
+   Partial run 2026-11-22: 7/11 scored, 4 skipped (quota) - re-run `--only 03,06,07,11`. Optionally also
+   `--provider claude` for a Gemini vs. Claude comparison in the report.
 8. [ ] Run the manual agent scenarios from `docs/TEST_PLAN.md`, record results in `AI_LOG.md`.
 9. [ ] Deploy to Streamlit Community Cloud (`docs/DEPLOYMENT_RUNBOOK.md`).
 10. [ ] Optional: before the demo, delete the 3 test recipes from Notion (or keep them as sample data).
@@ -54,4 +59,7 @@ Nothing.
 - 2026-11-22, teammate + Claude Code, branch `feat/live-integration`: created the shared Notion database (via API, exact
   `PROPERTY_SCHEMA`), switched the default model to `gemini-3.6-flash`, fixed the genai client being garbage-collected
   mid-request (+ regression test), ran the live smoke test in code and in the UI - everything passed.
-- Left unfinished: nothing.
+- Same day, MLabska + Claude Code: reviewed the eval answer key (Step 6, no changes; pancakes=Breakfast and
+  guacamole=Snack kept as judgment calls), partial eval run, fixed the eval scoring outages as results,
+  added the optional Claude fallback (branch `feat/claude-fallback`, built on `feat/evaluation`).
+- Left unfinished: Step 7 needs 4 more cases (Gemini quota), Step 8 not started.

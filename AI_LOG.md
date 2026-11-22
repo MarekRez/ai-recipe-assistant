@@ -38,6 +38,19 @@ Chronological log of important AI-related implementation decisions, experiments,
   Full UI flow (process -> review -> Save to Notion -> Ask Agent) works. Latency ~20 s per Gemini call.
 - Next: evaluation (HANDOFF items 6-8).
 
+## 2026-11-22 - Partial Extraction Eval + Claude Fallback
+
+- Context: HANDOFF items 6-7. The Gemini free tier (20 requests/day/model) ran out during the eval run.
+- Result (gemini-3.6-flash, 7 of 11 cases scored, 4 skipped): name 100 %, ingredient recall/precision 100 %,
+  quantities 100 %, units 92 %, times 6/7, vegetarian 7/7, category 6/7. Differences: guacamole -> "Side dish"
+  (answer key: Snack, judgment call); "handful"/"pinch" returned as units (answer key: null); lentil soup
+  cook time 25 invented from "simmer for 25 minutes" (only real rule violation).
+- Change: the eval counted a rate-limited negative case as passed - outages are now skipped, not scored.
+  Added an optional Claude fallback (ADR-012) for extraction and agent questions; `--provider` pins the eval
+  to one model. Live check: with Gemini over quota, extraction (5-9 s) and agent answers (~7 s) came from
+  claude-opus-5-5; it did not invent the lentil soup cook time.
+- Next: re-run the 4 skipped cases on Gemini; optionally a full `--provider claude` run for comparison.
+
 ## Log Entry Template
 
 ```
