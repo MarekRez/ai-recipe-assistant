@@ -82,6 +82,13 @@ Chronological log of important AI-related implementation decisions, experiments,
   sending; "Clear conversation" resets.
 - Result: live (Claude Haiku): "any breakfast recipes?" -> Fluffy Pancakes; "yes" -> full pancake recipe.
 
+## 2026-11-22 - UI Tweaks After Manual Testing
+
+- Change: removed the "Answered by Claude" note and the sidebar fallback status - end users do not need to know
+  which model answered (the switch is still logged). The question box is now a form, so Enter sends the question
+  and the box clears afterwards.
+- Result: verified in the browser: Enter submits, input clears, no model note.
+
 ## Log Entry Template
 
 ```

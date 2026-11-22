@@ -12,9 +12,9 @@ import streamlit as st
 from dotenv import load_dotenv
 from pydantic import ValidationError
 
-from agent.recipe_agent import ask_agent_with_provider
-from agent.tools import parse_recipe_draft_with_provider, save_recipe
-from services.config import claude_fallback_enabled, missing_settings
+from agent.recipe_agent import ask_agent
+from agent.tools import parse_recipe_draft, save_recipe
+from services.config import missing_settings
 from services.errors import ServiceError
 from services.notion_service import check_notion_setup
 
@@ -29,18 +29,12 @@ st.set_page_config(page_title="AI Recipe Assistant", page_icon="🍲", layout="w
 state = st.session_state
 state.setdefault("draft", None)
 state.setdefault("draft_version", 0)
-state.setdefault("draft_provider", None)
-state.setdefault("history", [])  # [{"question", "answer", "provider"}] - short agent memory, this session only
-state.setdefault("pending_question", None)
+state.setdefault("history", [])  # [{"question", "answer"}] - short agent memory, this session only
 state.setdefault("flash", None)
 
 
-CLAUDE_NOTE = "Answered by Claude - Gemini's free limit was reached or Gemini was unavailable."
-
-
-def set_draft(draft: dict | None, provider: str | None = None) -> None:
+def set_draft(draft: dict | None) -> None:
     state.draft = draft
-    state.draft_provider = provider
     state.draft_version += 1  # forces fresh form widgets for a new draft
 
 
@@ -79,11 +73,6 @@ with st.sidebar:
         st.error("Missing configuration: " + ", ".join(f"`{m}`" for m in missing))
     else:
         st.success("Configuration loaded.")
-    st.caption(
-        "Claude fallback: **on** (used only when Gemini hits its limit)"
-        if claude_fallback_enabled()
-        else "Claude fallback: off (set `ANTHROPIC_API_KEY` to enable)"
-    )
     if st.button("Check Notion database", disabled=bool(missing)):
         try:
             problems = check_notion_setup()
@@ -112,7 +101,7 @@ if st.button("Process Recipe"):
     else:
         with st.spinner("Extracting recipe..."):
             try:
-                set_draft(*parse_recipe_draft_with_provider(input_text))
+                set_draft(parse_recipe_draft(input_text))
             except ServiceError as exc:
                 st.error(exc.user_message)
 
@@ -121,8 +110,6 @@ if draft:
     v = state.draft_version
     st.markdown("#### Review before saving")
     st.caption("Check every field. Empty means the source did not state it - leave it empty rather than guessing.")
-    if state.draft_provider == "claude":
-        st.caption(CLAUDE_NOTE)
     with st.form(f"review_{v}"):
         name = st.text_input("Name", value=draft.get("name") or "")
         col1, col2, col3 = st.columns(3)
@@ -198,38 +185,30 @@ st.subheader("Ask My Cookbook")
 st.caption('Examples: "vegetarian meals under 30 minutes", "something with chicken", "I want pasta tonight".')
 
 
-def submit_question() -> None:
-    # Runs before the rerun: take the text and clear the input box for the next question.
-    state.pending_question = state.question_input.strip() or None
-    state.question_input = ""
-
-
 for turn in state.history:
     with st.chat_message("user"):
         st.markdown(turn["question"])
     with st.chat_message("assistant"):
         st.markdown(turn["answer"])
-        if turn["provider"] == "claude":
-            st.caption(CLAUDE_NOTE)
 
-st.text_input("Question", key="question_input", placeholder="Ask a question or reply to the agent")
-col_ask, col_clear = st.columns([1, 6])
-col_ask.button("Ask Agent", on_click=submit_question)
-if state.history and col_clear.button("Clear conversation"):
+# A form submits on Enter and clears the input afterwards.
+with st.form("ask_form", clear_on_submit=True, border=False):
+    question = st.text_input("Question", placeholder="Ask a question or reply to the agent")
+    asked = st.form_submit_button("Ask Agent")
+if state.history and st.button("Clear conversation"):
     state.history = []
     st.rerun()
 
-question, state.pending_question = state.pending_question, None
-if question:
+if asked and question.strip():
     staged: list[dict] = []
     with st.spinner("Agent is working..."):
         try:
-            answer, provider = ask_agent_with_provider(question, on_draft=staged.append, history=state.history)
+            answer = ask_agent(question.strip(), on_draft=staged.append, history=state.history)
         except ServiceError as exc:
             st.error(exc.user_message)
         else:
-            state.history.append({"question": question, "answer": answer, "provider": provider})
-    if staged:
-        set_draft(staged[-1])
-        state.flash = "The agent prepared a recipe draft - review it in Add Recipe before saving."
-    st.rerun()
+            state.history.append({"question": question.strip(), "answer": answer})
+            if staged:
+                set_draft(staged[-1])
+                state.flash = "The agent prepared a recipe draft - review it in Add Recipe before saving."
+            st.rerun()

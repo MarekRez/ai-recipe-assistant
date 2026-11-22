@@ -1,8 +1,8 @@
 """Recipe parsing service: input handling + LLM extraction + schema validation.
 
 Extraction uses Gemini; if Gemini is rate limited or down and ANTHROPIC_API_KEY is set, the same request
-is retried with Claude (ADR-012). Callers that need to know which model answered use the `*_with_provider`
-variants.
+is retried with Claude (ADR-012) and a warning is logged. `parse_recipe_with_provider` also reports which
+model answered (used by tests).
 """
 
 from __future__ import annotations
@@ -65,13 +65,9 @@ def parse_recipe(raw_text: str, source_url: str | None = None, provider: Provide
     return parse_recipe_with_provider(raw_text, source_url, provider)[0]
 
 
-def parse_recipe_input_with_provider(text_or_url: str) -> tuple[Recipe, str]:
+def parse_recipe_input(text_or_url: str) -> Recipe:
     """Accept either pasted recipe text or a single recipe URL."""
     value = (text_or_url or "").strip()
     if is_url(value):
-        return parse_recipe_with_provider(fetch_recipe_text(value), source_url=value)
-    return parse_recipe_with_provider(value)
-
-
-def parse_recipe_input(text_or_url: str) -> Recipe:
-    return parse_recipe_input_with_provider(text_or_url)[0]
+        return parse_recipe(fetch_recipe_text(value), source_url=value)
+    return parse_recipe(value)

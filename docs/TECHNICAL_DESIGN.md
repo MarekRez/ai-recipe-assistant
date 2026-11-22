@@ -45,6 +45,6 @@ Layering rule: `services/*` import neither Streamlit nor smolagents.
 2. Agent tools convert `ServiceError` into `{"error": ...}` so the agent reports instead of retrying.
 3. Agent failures (e.g. rate limits) become `ServiceError` in `ask_agent`.
    Gemini rate limits / outages raise `ProviderUnavailableError`; if `ANTHROPIC_API_KEY` is set, extraction and
-   agent questions are retried once with Claude and the UI labels the answer (ADR-012).
+   agent questions are retried once with Claude; the switch is logged, not shown to end users (ADR-012).
 4. Validation errors on save block the save and list the offending fields.
 5. Missing configuration is shown in the sidebar; "Check Notion database" validates the property schema.

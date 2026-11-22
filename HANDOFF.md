@@ -9,7 +9,7 @@ This file is **overwritten**, not appended - history lives in git log and `AI_LO
   text and URL extraction, review form, save to Notion, agent answers via `search_recipes` / `get_recipe`.
 - Offline test suite: 99 tests, all passing.
 - **Optional Claude fallback (ADR-012):** if Gemini hits its limit / is down and `ANTHROPIC_API_KEY` is set,
-  extraction and agent questions are answered by Claude Haiku 5.5 (labelled in the UI). Verified live 2026-11-22.
+  extraction and agent questions are answered by Claude Haiku 5.5 (logged, not shown in the UI). Verified live 2026-11-22.
   Without the key nothing changes - teammates do not need one.
 - Shared Notion database "Recipes" lives on the page "Recipe Assistant (app data)" in the team workspace;
   only that page is connected to the "Cooking Agent" integration. It holds the 10 fixture recipes (sample cookbook for the demo).

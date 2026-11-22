@@ -15,7 +15,7 @@ APP = str(Path(__file__).resolve().parent.parent / "app.py")
 @pytest.fixture
 def saved(monkeypatch):
     calls = []
-    monkeypatch.setattr(tools, "parse_recipe_draft_with_provider", lambda text: (load_expected("05_lentil_soup"), "gemini"))
+    monkeypatch.setattr(tools, "parse_recipe_draft", lambda text: load_expected("05_lentil_soup"))
     monkeypatch.setattr(tools, "save_recipe", lambda recipe: calls.append(recipe) or {"id": "p1", "url": "https://notion.so/p1"})
     return calls
 
@@ -54,9 +54,9 @@ def test_confirmed_edits_are_saved(saved):
 def test_agent_draft_goes_to_review(monkeypatch, saved):
     def fake_ask(question, on_draft=None, model=None, history=None):
         on_draft(load_expected("09_guacamole"))
-        return "Draft ready.", "gemini"
+        return "Draft ready."
 
-    monkeypatch.setattr(recipe_agent, "ask_agent_with_provider", fake_ask)
+    monkeypatch.setattr(recipe_agent, "ask_agent", fake_ask)
     at = AppTest.from_file(APP, default_timeout=30).run()
     at.text_input[0].input("Add this guacamole recipe ...")
     next(b for b in at.button if b.label == "Ask Agent").click()
@@ -66,18 +66,13 @@ def test_agent_draft_goes_to_review(monkeypatch, saved):
     assert saved == []
 
 
-def test_claude_answers_are_labelled(monkeypatch):
-    monkeypatch.setattr(recipe_agent, "ask_agent_with_provider", lambda q, on_draft=None, model=None, history=None: ("Pasta.", "claude"))
-    at = AppTest.from_file(APP, default_timeout=30).run()
-    at.text_input[0].input("pasta?")
-    next(b for b in at.button if b.label == "Ask Agent").click()
-    at.run()
-    assert not at.exception
-    assert any("Answered by Claude" in c.value for c in at.caption)
+
+def question_box(at: AppTest):
+    return next(t for t in at.text_input if t.label == "Question")
 
 
 def ask(at: AppTest, text: str) -> AppTest:
-    at.text_input(key="question_input").input(text)
+    question_box(at).input(text)
     next(b for b in at.button if b.label == "Ask Agent").click()
     return at.run()
 
@@ -87,17 +82,17 @@ def test_follow_up_questions_get_the_conversation(monkeypatch):
 
     def fake_ask(question, on_draft=None, model=None, history=None):
         seen.append((question, [t["question"] for t in history or []]))
-        return f"Answer to {question}", "gemini"
+        return f"Answer to {question}"
 
-    monkeypatch.setattr(recipe_agent, "ask_agent_with_provider", fake_ask)
+    monkeypatch.setattr(recipe_agent, "ask_agent", fake_ask)
     at = ask(AppTest.from_file(APP, default_timeout=30).run(), "breakfast ideas?")
     at = ask(at, "yes, show the steps")
     assert not at.exception
     assert seen == [("breakfast ideas?", []), ("yes, show the steps", ["breakfast ideas?"])]
-    assert at.text_input(key="question_input").value == ""  # input cleared for the next question
     assert [m.markdown[0].value for m in at.chat_message] == [
         "breakfast ideas?", "Answer to breakfast ideas?", "yes, show the steps", "Answer to yes, show the steps",
     ]
+    assert not any("Claude" in c.value for c in at.caption)  # end users are not told which model answered
     next(b for b in at.button if b.label == "Clear conversation").click()
     at.run()
     assert len(at.chat_message) == 0

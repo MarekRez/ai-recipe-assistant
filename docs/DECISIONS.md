@@ -87,6 +87,7 @@
     is turned off when the fallback is configured.
   - No fallback on non-outage results (`NOT_A_RECIPE`, validation errors, rejected config) - Claude would not
     change those.
-  - The UI labels Claude answers. The eval pins one provider per run (`--provider`), so metrics describe one model.
+  - The switch is logged (warning) but not shown to end users. The eval pins one provider per run (`--provider`),
+    so metrics describe one model.
 - Why: The Gemini free tier allows ~20 requests per day per model and newer Flash models often return 503 "high
   demand"; a teammate has Claude API credits. Teammates without a Claude key keep the free Gemini-only setup.
