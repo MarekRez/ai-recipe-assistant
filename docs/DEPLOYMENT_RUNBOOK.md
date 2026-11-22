@@ -17,6 +17,10 @@
 
 ## Streamlit Community Cloud
 
+Who can deploy: Streamlit requires **admin** rights on the GitHub repo. On a personal repo only the owner
+(`MarekRez`) has them - collaborators get `403` on deploy. Alternative: fork to your own account and deploy the fork
+(then GitHub "Sync fork" is needed before teammates' pushes reach the app).
+
 1. Push the repository to GitHub (`.env` and `.streamlit/secrets.toml` are git-ignored).
 2. Create the app from the repo (`MarekRez/ai-recipe-assistant`, branch `main`), main file `app.py`;
    in Advanced settings choose Python 3.12.

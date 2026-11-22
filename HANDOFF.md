@@ -5,31 +5,41 @@ This file is **overwritten**, not appended - history lives in git log and `AI_LO
 
 ## Status
 
-- MVP works end-to-end against **live** Gemini + Notion (verified 2026-11-22, in code and in the Streamlit UI):
-  text and URL extraction, review form, save to Notion, agent answers via `search_recipes` / `get_recipe`.
-- Offline test suite: 99 tests, all passing.
-- **Optional Claude fallback (ADR-012):** if Gemini hits its limit / is down and `ANTHROPIC_API_KEY` is set,
-  extraction and agent questions are answered by Claude Haiku 5.5 (logged, not shown in the UI). Verified live 2026-11-22.
-  Without the key nothing changes - teammates do not need one.
-- Shared Notion database "Recipes" lives on the page "Recipe Assistant (app data)" in the team workspace;
-  only that page is connected to the "Cooking Agent" integration. It holds the 10 fixture recipes (sample cookbook for the demo).
+- MVP is complete and verified against **live** Gemini, Claude and Notion (2026-11-22): text/URL extraction, review
+  form, save to Notion, cookbook agent with short conversation memory (follow-ups like "yes" work), Enter submits.
+- Offline test suite: 103 tests, all passing. Evaluation done (Step 6-8, results in `AI_LOG.md`).
+- Optional Claude fallback (ADR-012, `claude-haiku-5-5`) when Gemini hits its limit; optional password screen
+  (`APP_PASSWORD`, ADR-013) for the deployed app.
+- Notion: shared database "Recipes" on the page "Recipe Assistant (app data)", 10 fixture recipes as demo data.
+- **Not deployed yet - next step is for Marek (repo owner), see below.**
 
 ## Next Up (in priority order)
 
-1. [x] Merge `feat/mvp-core` into `main`.
-2. [x] Decide the open questions (shared Notion database, Gemini keys) - see Decisions.
-3. [x] Create the Notion integration + database; "Check Notion database" passes.
-4. [x] Verify the free-tier Flash model id -> `gemini-3.6-flash` (see Gotchas).
-5. [x] Live smoke test: paste recipe -> review -> save -> ask agent. Fixed: genai client closed mid-request.
-6. [x] Manually review expected outputs in `tests/fixtures/recipes/*.json` (written by an AI assistant - they are the eval ground truth).
-7. [x] Run `python -m evals.run_extraction_eval --out evals/results/<date>.json`, record metrics in `AI_LOG.md`.
-   Done on Claude Haiku 5.5 (11/11, results in `AI_LOG.md`). Gemini run is partial (7/11, quota) - optional:
-   re-run `--only 03,06,07,11` on Gemini for a full side-by-side comparison.
-8. [x] Run the manual agent scenarios from `docs/TEST_PLAN.md`, record results in `AI_LOG.md`.
-9. [ ] Deploy to Streamlit Community Cloud (`docs/DEPLOYMENT_RUNBOOK.md`).
-10. [ ] Optional: decide whether the 10 fixture recipes stay as demo data in Notion.
+1. [ ] **Deploy to Streamlit Community Cloud - Marek (`MarekRez`) must do this.** Streamlit requires *admin* rights on
+   the repo, and on a personal GitHub repo only the owner has them (a teammate's attempt got `403` on `/api/v1/deploy`).
+   1. Get privately from MLabska (never via git or the group chat): `NOTION_API_KEY`, `NOTION_DATA_SOURCE_ID`, and -
+      only if MLabska agrees, since it uses MLabska's Claude credits - `ANTHROPIC_API_KEY`. Use your own `GEMINI_API_KEY`.
+   2. Choose an `APP_PASSWORD` (not a personal password); share it with the team and the teacher only.
+   3. https://share.streamlit.io -> sign in with GitHub as `MarekRez` -> **Create app** -> "Paste GitHub URL":
+      `https://github.com/MarekRez/ai-recipe-assistant/blob/main/app.py`; App URL e.g. `euba-ai-recipe-assistant`.
+   4. **Advanced settings**: Python **3.12**; Secrets (TOML, top-level keys):
+      ```toml
+      GEMINI_API_KEY = "..."
+      GEMINI_MODEL = "gemini-3.6-flash"
+      NOTION_API_KEY = "..."
+      NOTION_DATA_SOURCE_ID = "..."
+      ANTHROPIC_API_KEY = "..."   # optional - delete the line to run on Gemini only
+      APP_PASSWORD = "..."
+      ```
+      Never deploy with API keys but without `APP_PASSWORD` - the app would be open to anyone with the link.
+   5. **Deploy** (first build takes a few minutes). Smoke test on the live URL: password screen -> sidebar "Check
+      Notion database" -> add a recipe (review, then Save) -> ask the agent "dinner ideas", then reply "yes".
+   6. Put the live URL into `README.md` and this file; tick this item. Later pushes to `main` redeploy automatically.
+2. [ ] Optional: re-run the Gemini eval cases `--only 03,06,07,11` (quota ran out) for a full Gemini vs. Claude comparison.
+3. [ ] Optional: decide whether the 10 fixture recipes stay as demo data in Notion.
 
-Next piece of work: deployment (item 9); the open question "who owns the deployment" needs an answer first.
+Done earlier: items 1-8 of the original list (merge, decisions, Notion setup, model id, live smoke test, eval answer
+key review, extraction eval, agent scenarios) - see `AI_LOG.md` and git log.
 
 ## In Progress / Half-Done
 
@@ -37,32 +47,27 @@ Nothing.
 
 ## Open Questions (need a human decision)
 
-- (none)
+- Does the online app get `ANTHROPIC_API_KEY`? It is MLabska's credit balance, so MLabska decides. Without it the app runs on
+  Gemini only and may hit the free-tier limit (20 requests/day) during the demo. Recommendation: yes, with `APP_PASSWORD`.
 
 ## Decisions
 
-- **One shared Notion integration + database** for the whole team (everyone demos the same cookbook). The Notion secret
-  and data source id are shared privately between teammates, never in git.
+- **One shared Notion integration + database** for the whole team. Secret and data source id are shared privately.
 - **Gemini keys:** each teammate uses their own Google AI Studio key (free-tier quota is per project).
+- **Deployment owner:** Marek (repo owner) - see item 1 for why.
 
 ## Gotchas (not yet promoted to CLAUDE.md / AGENTS.md)
 
-- `git fetch/push` can fail on Windows with `SSL certificate problem: unable to get local issuer certificate`. Fix: `git config --global http.sslBackend schannel`.
-- The eval makes ~11 Gemini requests per full run (6 s delay between them) - mind the free-tier daily quota.
+- **Gemini free tier = 20 requests per day per model per key** (`gemini-3.6-flash`, Nov 2026) and ~20 s per call.
+  A full eval is 11 requests, an agent question 2-4. With `ANTHROPIC_API_KEY` set the app switches to Claude instead.
 - Getting the Notion secret + `NOTION_DATA_SOURCE_ID`: ask a teammate privately (shared database, see Decisions).
-- **Gemini free tier = 20 requests per day per model per key** (`gemini-3.6-flash`, Nov 2026). A full eval is 11
-  requests, an agent question 2-4. Spread testing across teammates' keys / days; failed calls show as SKIP in the eval.
-- Gemini is slow on the free tier: ~20 s per extraction, ~20-40 s per agent question. Not a bug.
+- Streamlit Cloud: a failed deploy can look like "nothing happens" after clicking Deploy - check the browser network
+  tab (`/api/v1/deploy` status). Secret changes take about a minute to reach the running app.
 
 ## Last Session
 
-- 2026-11-22, teammate + Claude Code, branch `feat/live-integration`: created the shared Notion database (via API, exact
-  `PROPERTY_SCHEMA`), switched the default model to `gemini-3.6-flash`, fixed the genai client being garbage-collected
-  mid-request (+ regression test), ran the live smoke test in code and in the UI - everything passed.
-- Same day, MLabska + Claude Code: reviewed the eval answer key (Step 6, no changes; pancakes=Breakfast and
-  guacamole=Snack kept as judgment calls), partial eval run, fixed the eval scoring outages as results,
-  added the optional Claude fallback (branch `feat/claude-fallback`, built on `feat/evaluation`).
-- Then (branch `feat/evaluation-claude`): full extraction eval and all 5 agent scenarios on Claude Haiku 5.5 -
-  all scenarios pass; saved the 7 remaining fixture recipes to Notion (10 total).
-- Then (branch `feat/agent-memory`): the agent keeps a short conversation memory so follow-ups like "yes" work.
-- Left unfinished: nothing. Optional Gemini comparison run; next real item is deployment (9).
+- 2026-11-22, MLabska + Claude Code (branches `feat/evaluation`, `feat/claude-fallback`, `feat/evaluation-claude`,
+  `feat/agent-memory`, `feat/deploy`, all merged): eval answer key review, eval fixes, optional Claude fallback,
+  full eval + agent scenarios on Claude Haiku, short agent memory, Enter-to-submit, password screen for deployment.
+  Deployment attempt from MLabska's Streamlit account failed with 403 (needs repo admin) - handed to Marek.
+- Left unfinished: nothing; deployment is item 1 for Marek.
