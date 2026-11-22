@@ -4,12 +4,14 @@ Live extraction quality is measured by `python -m evals.run_extraction_eval`, no
 """
 
 import json
+import weakref
+from types import SimpleNamespace
 
 import pytest
 import requests
 
 from models.recipe import Recipe
-from services import recipe_parser, url_fetcher
+from services import gemini_service, recipe_parser, url_fetcher
 from services.errors import ServiceError
 from tests.conftest import FIXTURES, load_expected, positive_fixture_stems
 
@@ -119,3 +121,22 @@ def test_fetch_errors_become_user_friendly(monkeypatch):
     monkeypatch.setattr(url_fetcher.requests, "get", boom)
     with pytest.raises(ServiceError, match="Paste the recipe text"):
         url_fetcher.fetch_recipe_text("https://example.com")
+
+
+def test_gemini_client_stays_alive_during_request(monkeypatch):
+    # google-genai 3.x closes its HTTP client when the Client is garbage-collected; the request must keep a reference.
+    class FakeModels:
+        def __init__(self, owner):
+            self._owner = weakref.ref(owner)
+
+        def generate_content(self, **kwargs):
+            if self._owner() is None:
+                raise RuntimeError("Cannot send a request, as the client has been closed.")
+            return SimpleNamespace(text='{"name": "X"}')
+
+    class FakeClient:
+        def __init__(self):
+            self.models = FakeModels(self)
+
+    monkeypatch.setattr(gemini_service, "_client", FakeClient)
+    assert gemini_service.extract_recipe_structured("text") == {"name": "X"}

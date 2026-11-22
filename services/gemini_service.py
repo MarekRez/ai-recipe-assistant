@@ -42,8 +42,12 @@ def _client() -> genai.Client:
 
 def extract_recipe_structured(raw_text: str) -> dict:
     """Return Gemini's structured extraction payload as a dict (not yet validated)."""
+    # Keep a reference to the client for the whole request: google-genai 3.x closes its HTTP client when the
+    # Client object is garbage-collected, so `_client().models.generate_content(...)` can fail mid-request with
+    # "Cannot send a request, as the client has been closed".
+    client = _client()
     try:
-        response = _client().models.generate_content(
+        response = client.models.generate_content(
             model=get_setting("GEMINI_MODEL"),
             contents=EXTRACTION_PROMPT + raw_text,
             config=types.GenerateContentConfig(
