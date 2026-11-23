@@ -25,8 +25,8 @@ This file is **overwritten**, not appended - history lives in git log and `AI_LO
    `main` redeploy automatically (reboot after new imports, see Gotchas). Secrets live in the app settings, never in git.
 2. [ ] Test video/photo upload live **on Gemini** (its quota was used up on 2026-11-23; the Claude photo fallback was
    tested live and works): a short recipe Reel (MP4) with and without the caption, and 1-2 photos of a cookbook
-   page; amounts only visible in the picture must stay empty. Then merge, push and reboot the deployed app
-   (see Gotchas) - the deploy also needs `pip install` of the new `pillow` pin (automatic on Streamlit Cloud).
+   page; amounts only visible in the picture must stay empty. Merged to `main` on 2026-11-23 - **reboot the
+   deployed app** after this push (new imports, see Gotchas); Streamlit Cloud installs the `pillow` pin itself.
 3. [ ] Optional: re-run the Gemini eval cases `--only 03,06,07,11` (quota ran out) for a full Gemini vs. Claude comparison.
 4. [ ] Optional: decide whether the 10 fixture recipes stay as demo data in Notion.
 
@@ -71,4 +71,4 @@ Nothing.
   link in the caption field becomes `source_url`). A pasted Reel URL does not work (Instagram login page) - by design. Agent tool `browse_recipes` + instruction 3a for vague requests; live check
   passed (see `AI_LOG.md`). Also: `source_url` can no longer come from the model for text input. 155 tests green. Photo fallback to Claude + clear "daily limit" message, both tested live.
   Earlier the same day (merged): duplicate warning (ADR-014), recipe cache + My Recipes (ADR-015).
-- Left unfinished: live Gemini video/photo test (Next Up 2) - branch not merged yet.
+- Merged into `main`. Left unfinished: live Gemini video/photo test and the reboot of the deployed app (Next Up 2).
