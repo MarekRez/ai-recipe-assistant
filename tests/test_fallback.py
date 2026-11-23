@@ -124,7 +124,8 @@ def test_claude_request_has_no_sampling_params(monkeypatch):
 
 def test_tool_definitions_translate_to_anthropic_format():
     defs = {t.name: claude_agent.to_anthropic_tool(t) for t in make_agent_tools()}
-    assert set(defs) == {"search_recipes", "get_recipe", "parse_recipe"}  # still no save tool (ADR-005)
+    assert set(defs) == {"search_recipes", "browse_recipes", "get_recipe", "parse_recipe"}  # still no save tool (ADR-005)
+    assert defs["browse_recipes"]["input_schema"]["required"] == []
     search = defs["search_recipes"]["input_schema"]
     assert search["required"] == []  # every filter is optional
     assert search["properties"]["max_time"]["type"] == "integer"

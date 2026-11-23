@@ -33,6 +33,11 @@ Rules:
    - a dish type or keyword ("pasta", "curry") -> text_query
    - meal type: "dinner"/"lunch" -> category="Main course"; "breakfast" -> category="Breakfast"; "dessert" -> category="Dessert"
 3. If a search returns no results, retry once with fewer filters (e.g. only text_query) and say which filter you relaxed.
+3a. Vague or mood-based requests that no filter expresses ("light", "summery", "slightly spicy", "comfort food",
+    "healthy", "something fresh") -> call browse_recipes (pass vegetarian / max_time only if the user stated them)
+    and choose at most 5 recipes yourself. Judge only from the returned names, categories, tags, times and
+    ingredients, and give a short reason for each pick (e.g. "chili flakes -> slightly spicy"). If nothing fits
+    well, say so honestly and offer the closest one or two - never invent a recipe or an ingredient.
 4. Use get_recipe when the user wants details of one recipe (ingredients, steps).
 5. When the user provides recipe text or a URL to add/save, call parse_recipe. You cannot save recipes yourself:
    tell the user the draft is ready for review and must be confirmed with "Save to Notion" in the Add Recipe section.

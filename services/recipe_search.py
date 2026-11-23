@@ -72,6 +72,30 @@ def filter_recipes(records: list[dict], filters: SearchFilters) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Browse for vague requests (ADR-017)
+# ---------------------------------------------------------------------------
+
+MAX_BROWSE_RESULTS = 150  # keeps one agent step small (~100 tokens per recipe)
+
+
+def browse_entry(record: dict) -> dict:
+    """RecipeSummary plus ingredient names - enough for the model to judge "light", "spicy", "summery"."""
+    entry = summarize(record)
+    del entry["url"]  # not needed for choosing; get_recipe returns it
+    entry["ingredients"] = [i.get("name") for i in record.get("ingredients", []) if i.get("name")]
+    return entry
+
+
+def browse_recipes(records: list[dict], filters: SearchFilters) -> dict:
+    matching = [r for r in records if matches(r, filters)]
+    return {
+        "count": len(matching),
+        "truncated": len(matching) > MAX_BROWSE_RESULTS,
+        "recipes": [browse_entry(r) for r in matching[:MAX_BROWSE_RESULTS]],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Duplicate detection (ADR-014)
 # ---------------------------------------------------------------------------
 

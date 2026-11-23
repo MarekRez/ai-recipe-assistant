@@ -16,6 +16,7 @@ from smolagents import Tool, tool
 from models.recipe import Recipe, SearchFilters
 from services.errors import ServiceError
 from services.notion_service import (
+    browse_recipes_in_notion,
     clear_recipe_cache,
     find_duplicate_recipes_in_notion,
     get_recipe_from_notion,
@@ -102,6 +103,20 @@ def search_recipes(
 
 
 @tool
+def browse_recipes(vegetarian: bool | None = None, max_time: int | None = None) -> dict:
+    """List all saved recipes in compact form (name, category, total time, vegetarian, tags, ingredient names) so you can choose matches yourself. Use it for vague or mood-based requests that keyword filters cannot express, e.g. "something light and summery", "slightly spicy", "comfort food", "something healthy".
+
+    Args:
+        vegetarian: True for vegetarian only, False for non-vegetarian only. Omit if the user did not ask.
+        max_time: Maximum total time in minutes, only if the user stated a time limit.
+    """
+    try:
+        return browse_recipes_in_notion(SearchFilters(vegetarian=vegetarian, max_time=max_time))
+    except ServiceError as exc:
+        return {"error": exc.user_message}
+
+
+@tool
 def get_recipe(name_or_id: str) -> dict:
     """Get one complete saved recipe (ingredients, instructions, times) by its name or Notion page id.
 
@@ -139,4 +154,4 @@ def make_parse_recipe_tool(on_draft: Callable[[dict], None] | None = None) -> To
 
 
 def make_agent_tools(on_draft: Callable[[dict], None] | None = None) -> list[Tool]:
-    return [search_recipes, get_recipe, make_parse_recipe_tool(on_draft)]
+    return [search_recipes, browse_recipes, get_recipe, make_parse_recipe_tool(on_draft)]

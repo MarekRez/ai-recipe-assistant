@@ -1,7 +1,7 @@
 """Deterministic search over stored records (docs/AGENT_SPEC.md example intents)."""
 
 from models.recipe import SearchFilters
-from services.recipe_search import filter_recipes, find_duplicates
+from services.recipe_search import browse_recipes, filter_recipes, find_duplicates
 
 
 def names(results):
@@ -83,3 +83,28 @@ def test_different_recipe_id_in_query_is_not_a_duplicate(sample_records):
 def test_missing_source_urls_never_match(sample_records):
     records = [dict(r, source_url=None) for r in sample_records]
     assert find_duplicates(records, "Something New", None) == []
+
+
+# --- browse for vague requests (ADR-017) ---------------------------------------------------------
+
+
+def test_browse_gives_compact_entries_with_ingredient_names(sample_records):
+    result = browse_recipes(sample_records, SearchFilters())
+    assert result["count"] == len(sample_records) and result["truncated"] is False
+    curry = next(r for r in result["recipes"] if r["name"] == "Easy Chicken Curry")
+    assert "chicken thighs" in curry["ingredients"] and curry["total_time_minutes"] == 45
+    assert set(curry) == {"id", "name", "total_time_minutes", "category", "vegetarian", "tags", "ingredients"}
+    assert all(isinstance(i, str) for i in curry["ingredients"])  # names only: no quantities or steps
+
+
+def test_browse_applies_hard_filters(sample_records):
+    result = browse_recipes(sample_records, SearchFilters(vegetarian=True, max_time=15))
+    assert {r["name"] for r in result["recipes"]} == {"Chocolate Mug Cake", "Simple Guacamole"}
+
+
+def test_browse_is_capped(sample_records, monkeypatch):
+    from services import recipe_search
+
+    monkeypatch.setattr(recipe_search, "MAX_BROWSE_RESULTS", 3)
+    result = browse_recipes(sample_records, SearchFilters())
+    assert len(result["recipes"]) == 3 and result["truncated"] is True and result["count"] == len(sample_records)

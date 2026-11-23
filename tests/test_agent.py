@@ -39,7 +39,7 @@ def tool_call(name, arguments, call_id="call_1"):
 
 def test_agent_cannot_save_recipes():
     names = {t.name for t in tools.make_agent_tools()}
-    assert names == {"search_recipes", "get_recipe", "parse_recipe"}
+    assert names == {"search_recipes", "browse_recipes", "get_recipe", "parse_recipe"}
 
 
 def test_search_tool_builds_filters(monkeypatch):
@@ -149,3 +149,35 @@ def test_list_saved_recipes_is_sorted_and_refresh_clears_the_cache(monkeypatch, 
     assert cleared == []
     tools.list_saved_recipes(refresh=True)
     assert cleared == [True]
+
+
+def test_vague_request_browses_and_the_model_picks(monkeypatch):
+    seen = []
+
+    def fake_browse(filters):
+        seen.append(filters)
+        return {"count": 1, "truncated": False, "recipes": [{"name": "Greek Salad", "ingredients": ["feta"]}]}
+
+    monkeypatch.setattr(tools, "browse_recipes_in_notion", fake_browse)
+    model = ScriptedModel(
+        [
+            tool_call("browse_recipes", {"vegetarian": True}),
+            tool_call("final_answer", {"answer": "Greek Salad - fresh and light"}, call_id="call_2"),
+        ]
+    )
+    answer = recipe_agent.ask_agent("something light and summery, vegetarian", model=model)
+    assert answer == "Greek Salad - fresh and light"
+    assert seen == [SearchFilters(vegetarian=True)]
+    assert "browse_recipes" in model.offered_tools[0]
+
+
+def test_browse_tool_returns_errors(monkeypatch):
+    def boom(filters):
+        raise ServiceError("Notion is not reachable right now. Try again later.")
+
+    monkeypatch.setattr(tools, "browse_recipes_in_notion", boom)
+    assert tools.browse_recipes() == {"error": "Notion is not reachable right now. Try again later."}
+
+
+def test_instructions_send_vague_requests_to_browse():
+    assert "browse_recipes" in recipe_agent.INSTRUCTIONS and "never invent" in recipe_agent.INSTRUCTIONS
