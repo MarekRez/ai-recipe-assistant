@@ -161,6 +161,13 @@ def test_get_recipe_by_name_exact_then_partial(fake_client):
     assert ns.get_recipe_from_notion("pizza") is None
 
 
+def test_find_duplicates_reads_the_saved_recipes(fake_client):
+    ns.save_recipe_to_notion(curry())
+    found = ns.find_duplicate_recipes_in_notion("EASY chicken curry", None)
+    assert [d["name"] for d in found] == ["Easy Chicken Curry"] and found[0]["same_name"] is True
+    assert ns.find_duplicate_recipes_in_notion("Pizza", None) == []
+
+
 def test_get_recipe_by_id(fake_client):
     fake_client.store.append(as_page(ns.recipe_to_properties(curry()), page_id="0123456789abcdef0123456789abcdef"))
     assert ns.get_recipe_from_notion("01234567-89ab-cdef-0123-456789abcdef")["name"] == "Easy Chicken Curry"

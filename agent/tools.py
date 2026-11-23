@@ -16,6 +16,7 @@ from smolagents import Tool, tool
 from models.recipe import Recipe, SearchFilters
 from services.errors import ServiceError
 from services.notion_service import (
+    find_duplicate_recipes_in_notion,
     get_recipe_from_notion,
     save_recipe_to_notion,
     search_recipes_in_notion,
@@ -35,6 +36,14 @@ def parse_recipe_draft(text_or_url: str) -> dict:
 def save_recipe(recipe: dict) -> dict:
     """Validate and save a user-confirmed recipe. UI-only, never exposed to the agent. Raises ServiceError."""
     return save_recipe_to_notion(Recipe.model_validate(recipe))
+
+
+def find_duplicate_recipes(draft: dict) -> list[dict]:
+    """Saved recipes that look like the same recipe as the draft (same name or source URL). UI-only.
+
+    Raises ServiceError; the UI treats a failed check as "no warning" so it never blocks saving.
+    """
+    return find_duplicate_recipes_in_notion(draft.get("name"), draft.get("source_url"))
 
 
 # ---------------------------------------------------------------------------

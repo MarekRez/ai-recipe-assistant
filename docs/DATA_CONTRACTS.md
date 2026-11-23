@@ -50,6 +50,10 @@ What Notion reads return: all Recipe fields plus `id` (Notion page id), `url` (N
  "vegetarian": "boolean|null", "tags": ["string"], "url": "string"}
 ```
 
+## Duplicate Match (`DuplicateMatch`, ADR-014)
+
+`RecipeSummary` plus `"same_name": bool` and `"same_source_url": bool` (at least one is `true`).
+
 ## Notion Mapping
 
 Exact property setup: `NOTION_SETUP.md`.

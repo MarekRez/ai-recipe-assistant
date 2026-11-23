@@ -19,7 +19,7 @@ from pydantic import ValidationError
 from models.recipe import Recipe, SearchFilters
 from services.config import get_setting
 from services.errors import ServiceError
-from services.recipe_search import filter_recipes
+from services.recipe_search import filter_recipes, find_duplicates
 
 logger = logging.getLogger(__name__)
 
@@ -214,6 +214,11 @@ def list_all_recipes() -> list[dict]:
 def search_recipes_in_notion(filters: SearchFilters) -> list[dict]:
     """Deterministic search: load all recipes (small dataset) and filter in Python."""
     return filter_recipes(list_all_recipes(), filters)
+
+
+def find_duplicate_recipes_in_notion(name: str | None, source_url: str | None = None) -> list[dict]:
+    """Saved recipes with the same name or source URL as a new draft (ADR-014)."""
+    return find_duplicates(list_all_recipes(), name, source_url)
 
 
 def get_recipe_from_notion(name_or_id: str) -> dict | None:

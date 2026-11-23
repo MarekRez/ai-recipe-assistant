@@ -21,7 +21,7 @@ Source of truth, in order: `PROJECT_CONTEXT.md` > `docs/*` > code. If they disag
 
 - `models/recipe.py` - the only schema definition. Everything validates through it.
 - `services/*` - plain Python integrations (Gemini, Notion, URL fetch, parsing, search). No Streamlit or smolagents imports. Failures raise `ServiceError(user_message, detail)`.
-- `agent/tools.py` - smolagents tools (`search_recipes`, `get_recipe`, `parse_recipe`) + UI functions (`parse_recipe_draft`, `save_recipe`). JSON-compatible args/returns; tools return `{"error": ...}` instead of raising.
+- `agent/tools.py` - smolagents tools (`search_recipes`, `get_recipe`, `parse_recipe`) + UI functions (`parse_recipe_draft`, `find_duplicate_recipes`, `save_recipe`). JSON-compatible args/returns; tools return `{"error": ...}` instead of raising.
 - `agent/recipe_agent.py` - builds the agent (model + tools + instructions), `ask_agent()`.
 - `app.py` - UI only. Drafts in `st.session_state` (every click reruns the script).
 - `evals/` - live eval script + pure scoring functions.
