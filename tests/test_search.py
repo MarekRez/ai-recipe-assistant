@@ -1,7 +1,7 @@
 """Deterministic search over stored records (docs/AGENT_SPEC.md example intents)."""
 
 from models.recipe import SearchFilters
-from services.recipe_search import filter_recipes
+from services.recipe_search import filter_recipes, find_duplicates
 
 
 def names(results):
@@ -52,3 +52,34 @@ def test_no_filters_returns_all_as_summaries(sample_records):
     results = filter_recipes(sample_records, SearchFilters())
     assert len(results) == len(sample_records)
     assert set(results[0]) == {"id", "name", "total_time_minutes", "category", "vegetarian", "tags", "url"}
+
+
+# --- duplicate detection (ADR-014) ---------------------------------------------------------------
+
+
+def test_duplicate_by_name_ignores_case_spacing_and_punctuation(sample_records):
+    found = find_duplicates(sample_records, "  easy chicken-CURRY! ")
+    assert [d["name"] for d in found] == ["Easy Chicken Curry"]
+    assert found[0]["same_name"] is True and found[0]["same_source_url"] is False
+    assert found[0]["url"]  # link to the existing Notion page
+
+
+def test_similar_but_different_name_is_not_a_duplicate(sample_records):
+    assert find_duplicates(sample_records, "Chicken Curry") == []
+    assert find_duplicates(sample_records, "") == []
+
+
+def test_duplicate_by_source_url_ignores_scheme_www_slash_and_tracking(sample_records):
+    records = [dict(sample_records[0], source_url="https://www.example.com/recipes/curry/?utm_source=ig&id=7")]
+    found = find_duplicates(records, "Another Name", "http://EXAMPLE.com/recipes/curry?id=7&fbclid=x#steps")
+    assert len(found) == 1 and found[0]["same_source_url"] is True and found[0]["same_name"] is False
+
+
+def test_different_recipe_id_in_query_is_not_a_duplicate(sample_records):
+    records = [dict(sample_records[0], source_url="https://example.com/recipe.php?id=1")]
+    assert find_duplicates(records, "Another Name", "https://example.com/recipe.php?id=2") == []
+
+
+def test_missing_source_urls_never_match(sample_records):
+    records = [dict(r, source_url=None) for r in sample_records]
+    assert find_duplicates(records, "Something New", None) == []

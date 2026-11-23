@@ -6,6 +6,9 @@ A stored record is `Recipe.model_dump()` plus `id` and `url` (see docs/DATA_CONT
 
 from __future__ import annotations
 
+import re
+from urllib.parse import parse_qsl, urlencode, urlsplit
+
 from models.recipe import Recipe, SearchFilters
 
 
@@ -66,3 +69,40 @@ def summarize(record: dict) -> dict:
 
 def filter_recipes(records: list[dict], filters: SearchFilters) -> list[dict]:
     return [summarize(r) for r in records if matches(r, filters)]
+
+
+# ---------------------------------------------------------------------------
+# Duplicate detection (ADR-014)
+# ---------------------------------------------------------------------------
+
+
+def _norm_name(value: str | None) -> str:
+    """Case-, whitespace- and punctuation-insensitive name: "Easy Chicken-Curry!" == "easy chicken curry"."""
+    return " ".join(re.sub(r"[^\w]+", " ", (value or "").casefold()).split())
+
+
+_TRACKING_PARAMS = ("utm_", "fbclid", "gclid", "igshid", "mc_")
+
+
+def _norm_url(value: str | None) -> str:
+    """Same page regardless of http/https, "www.", host case, trailing slash, tracking parameters or #fragment."""
+    if not value or not value.strip():
+        return ""
+    parts = urlsplit(value.strip())
+    host = parts.netloc.lower().removeprefix("www.")
+    if not host:
+        return ""
+    query = [(k, v) for k, v in parse_qsl(parts.query) if not k.lower().startswith(_TRACKING_PARAMS)]
+    return host + parts.path.rstrip("/") + ("?" + urlencode(sorted(query)) if query else "")
+
+
+def find_duplicates(records: list[dict], name: str | None, source_url: str | None = None) -> list[dict]:
+    """Saved recipes with the same (normalized) name or the same source URL, as summaries."""
+    wanted_name, wanted_url = _norm_name(name), _norm_url(source_url)
+    found = []
+    for record in records:
+        same_name = bool(wanted_name) and _norm_name(record.get("name")) == wanted_name
+        same_url = bool(wanted_url) and _norm_url(record.get("source_url")) == wanted_url
+        if same_name or same_url:
+            found.append(summarize(record) | {"same_name": same_name, "same_source_url": same_url})
+    return found
