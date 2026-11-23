@@ -45,6 +45,7 @@ state.setdefault("draft", None)
 state.setdefault("draft_version", 0)
 state.setdefault("history", [])  # [{"question", "answer"}] - short agent memory, this session only
 state.setdefault("flash", None)
+state.setdefault("input_version", 0)  # bumped after a save to clear the Add Recipe field
 
 
 def set_draft(draft: dict | None) -> None:
@@ -108,9 +109,18 @@ if state.flash:
 # --- Add recipe -------------------------------------------------------------------
 
 st.subheader("Add Recipe")
-input_text = st.text_area("Paste recipe text or a recipe URL", height=180)
+# A form so Ctrl+Enter submits (plain Enter must stay a newline for pasted recipe text).
+# The input key is versioned so a successful save gives a fresh, empty field.
+with st.form("add_recipe_form", border=False):
+    input_text = st.text_area(
+        "Paste recipe text or a recipe URL",
+        height=180,
+        key=f"recipe_input_{state.input_version}",
+        help="Press Ctrl+Enter to process.",
+    )
+    process_clicked = st.form_submit_button("Process Recipe", type="primary")
 
-if st.button("Process Recipe", type="primary"):
+if process_clicked:
     if not input_text.strip():
         st.warning("Please provide recipe text or a URL.")
     else:
@@ -189,6 +199,7 @@ if draft:
             st.error(exc.user_message)
         else:
             set_draft(None)
+            state.input_version += 1
             state.flash = f"Saved **{confirmed['name']}** to Notion: {result.get('url') or result['id']}"
             st.rerun()
 
