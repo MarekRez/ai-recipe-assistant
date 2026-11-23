@@ -14,7 +14,14 @@ from dotenv import load_dotenv
 from pydantic import ValidationError
 
 from agent.recipe_agent import ask_agent
-from agent.tools import find_duplicate_recipes, list_saved_recipes, parse_recipe_draft, save_recipe
+from agent.tools import (
+    find_duplicate_recipes,
+    list_saved_recipes,
+    parse_recipe_draft,
+    parse_recipe_video_draft,
+    save_recipe,
+)
+from services.recipe_parser import VIDEO_TYPES
 from services.config import app_password, missing_settings
 from services.errors import ServiceError
 from services.notion_service import check_notion_setup
@@ -151,13 +158,25 @@ with st.form("add_recipe_form", border=False):
         "Paste recipe text or a recipe URL",
         height=180,
         key=f"recipe_input_{state.input_version}",
-        help="Press Ctrl+Enter to process.",
+        help="Press Ctrl+Enter to process. With a video: paste its caption or its link here (optional).",
+    )
+    video = st.file_uploader(
+        "Or upload a recipe video (e.g. a downloaded Reel)",
+        type=list(VIDEO_TYPES),
+        key=f"recipe_video_{state.input_version}",
     )
     process_clicked = st.form_submit_button("Process Recipe", type="primary")
 
 if process_clicked:
-    if not input_text.strip():
-        st.warning("Please provide recipe text or a URL.")
+    if video is not None:
+        with st.spinner("Watching the video... 🎬 (this can take up to a minute)"):
+            try:
+                mime_type = VIDEO_TYPES.get(video.name.rsplit(".", 1)[-1].lower(), video.type)  # browsers vary for .mov
+                set_draft(parse_recipe_video_draft(video.getvalue(), mime_type, input_text))
+            except ServiceError as exc:
+                st.error(exc.user_message)
+    elif not input_text.strip():
+        st.warning("Please provide recipe text, a URL or a video.")
     else:
         with st.spinner("Reading the recipe... 🥕"):
             try:

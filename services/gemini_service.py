@@ -1,9 +1,11 @@
-"""Gemini service wrapper for structured recipe extraction."""
+"""Gemini service wrapper for structured recipe extraction (text and video, ADR-016)."""
 
 from __future__ import annotations
 
+import io
 import json
 import logging
+import time
 
 from google import genai
 from google.genai import errors as genai_errors
@@ -15,7 +17,7 @@ from services.errors import ProviderUnavailableError, ServiceError
 
 logger = logging.getLogger(__name__)
 
-EXTRACTION_PROMPT = """You extract recipes into structured JSON.
+EXTRACTION_RULES = """You extract recipes into structured JSON.
 
 Strict rules:
 1. Use ONLY information present in the source text. Never invent ingredients, quantities, units, times or steps.
@@ -31,13 +33,52 @@ Strict rules:
 8. tags: 2-6 short lowercase keywords describing the dish (main ingredient, cuisine, meal type).
 9. Keep name, ingredients and instructions in the language of the source. One instruction step per list item.
 10. If the text does not contain a recipe, return {"name": "NOT_A_RECIPE"}.
-
-Source text:
 """
+
+EXTRACTION_PROMPT = EXTRACTION_RULES + "\nSource text:\n"
+
+VIDEO_PROMPT = EXTRACTION_RULES + """11. The source is the attached video plus the caption below. Use what is said, what is shown as written
+    text (on-screen captions, labels) and the caption. Never read amounts off the picture (how full a cup looks,
+    how many pieces you see) - an amount counts only when it is said or written.
+12. raw: the ingredient as said or written in the video or caption.
+13. Instructions: the steps as said, written or clearly shown, in order. If the video does not show a recipe at all,
+    return {"name": "NOT_A_RECIPE"}.
+
+Caption / extra text from the user (may be empty):
+"""
+
+VIDEO_PROCESSING_TIMEOUT = 120  # seconds Gemini may take to process an uploaded video before we give up
+_POLL_SECONDS = 2
 
 
 def _client() -> genai.Client:
     return genai.Client(api_key=get_setting("GEMINI_API_KEY"))
+
+
+def _api_error(exc: genai_errors.APIError) -> ServiceError:
+    logger.exception("Gemini request failed")
+    if exc.code == 429:
+        return ProviderUnavailableError("Gemini rate limit reached. Wait a minute and try again.", str(exc))
+    if exc.code in (400, 401, 403, 404):
+        return ServiceError("Gemini rejected the request. Check GEMINI_API_KEY and GEMINI_MODEL.", str(exc))
+    return ProviderUnavailableError("Gemini is not reachable right now. Try again later.", str(exc))
+
+
+def _generate(client: genai.Client, contents) -> dict:
+    """One structured-output request; returns the parsed JSON payload (not yet validated)."""
+    try:
+        response = client.models.generate_content(
+            model=get_setting("GEMINI_MODEL"),
+            contents=contents,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=Recipe,
+                temperature=0,
+            ),
+        )
+    except genai_errors.APIError as exc:
+        raise _api_error(exc) from exc
+    return _payload(response.text or "")
 
 
 def extract_recipe_structured(raw_text: str) -> dict:
@@ -46,25 +87,43 @@ def extract_recipe_structured(raw_text: str) -> dict:
     # Client object is garbage-collected, so `_client().models.generate_content(...)` can fail mid-request with
     # "Cannot send a request, as the client has been closed".
     client = _client()
+    return _generate(client, EXTRACTION_PROMPT + raw_text)
+
+
+def extract_recipe_from_video(data: bytes, mime_type: str, caption: str = "") -> dict:
+    """Upload a video to the Gemini Files API, extract the recipe from it, then delete the upload.
+
+    Uploading (instead of inline bytes) works for any Reel size; the file is removed right after the answer
+    (Gemini would otherwise keep it for 48 h).
+    """
+    client = _client()
     try:
-        response = client.models.generate_content(
-            model=get_setting("GEMINI_MODEL"),
-            contents=EXTRACTION_PROMPT + raw_text,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=Recipe,
-                temperature=0,
-            ),
+        uploaded = client.files.upload(
+            file=io.BytesIO(data), config=types.UploadFileConfig(mime_type=mime_type, display_name="recipe-video")
         )
     except genai_errors.APIError as exc:
-        logger.exception("Gemini request failed")
-        if exc.code == 429:
-            raise ProviderUnavailableError("Gemini rate limit reached. Wait a minute and try again.", str(exc)) from exc
-        if exc.code in (400, 401, 403, 404):
-            raise ServiceError("Gemini rejected the request. Check GEMINI_API_KEY and GEMINI_MODEL.", str(exc)) from exc
-        raise ProviderUnavailableError("Gemini is not reachable right now. Try again later.", str(exc)) from exc
+        raise _api_error(exc) from exc
+    try:
+        deadline = time.monotonic() + VIDEO_PROCESSING_TIMEOUT
+        while uploaded.state == types.FileState.PROCESSING:
+            if time.monotonic() > deadline:
+                raise ProviderUnavailableError("Gemini is taking too long to process the video. Try again later.")
+            time.sleep(_POLL_SECONDS)
+            try:
+                uploaded = client.files.get(name=uploaded.name)
+            except genai_errors.APIError as exc:
+                raise _api_error(exc) from exc
+        if uploaded.state == types.FileState.FAILED:
+            raise ServiceError("Gemini could not read this video. Try another file or paste the recipe text.")
+        return _generate(client, [uploaded, VIDEO_PROMPT + (caption or "")])
+    finally:
+        try:
+            client.files.delete(name=uploaded.name)
+        except Exception:  # cleanup only - Gemini deletes uploads after 48 h anyway
+            logger.warning("Could not delete uploaded video %s", uploaded.name, exc_info=True)
 
-    text = response.text or ""
+
+def _payload(text: str) -> dict:
     try:
         payload = json.loads(text)
     except json.JSONDecodeError as exc:

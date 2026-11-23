@@ -16,7 +16,7 @@ from models.recipe import Recipe
 from services import claude_service
 from services.config import claude_fallback_enabled
 from services.errors import ProviderUnavailableError, ServiceError
-from services.gemini_service import extract_recipe_structured
+from services.gemini_service import extract_recipe_from_video, extract_recipe_structured
 from services.url_fetcher import fetch_recipe_text, is_url
 
 logger = logging.getLogger(__name__)
@@ -25,6 +25,10 @@ NOT_A_RECIPE = "NOT_A_RECIPE"
 NOT_A_RECIPE_MESSAGE = "No recipe found in the given text."
 
 Provider = Literal["auto", "gemini", "claude"]
+
+# Video upload (ADR-016). Gemini only - Claude cannot read video, so there is no fallback for this path.
+VIDEO_TYPES = {"mp4": "video/mp4", "mov": "video/quicktime", "webm": "video/webm"}
+MAX_VIDEO_MB = 100  # keep in sync with server.maxUploadSize in .streamlit/config.toml
 
 
 def _extract(raw_text: str, provider: Provider) -> tuple[dict, str]:
@@ -50,15 +54,38 @@ def parse_recipe_with_provider(
     if not raw_text or not raw_text.strip():
         raise ServiceError("Recipe text is empty.")
     payload, used = _extract(raw_text, provider)
+    return _to_recipe(payload, source_url), used
+
+
+def _to_recipe(payload: dict, source_url: str | None) -> Recipe:
     if payload.get("name") == NOT_A_RECIPE:
         raise ServiceError(NOT_A_RECIPE_MESSAGE)
-    if source_url:
-        payload["source_url"] = source_url
+    payload["source_url"] = source_url  # from the input, never from the model
     try:
-        return Recipe.model_validate(payload), used
+        return Recipe.model_validate(payload)
     except ValidationError as exc:
         logger.error("Extraction failed schema validation: %s", exc)
         raise ServiceError("The extracted recipe did not pass validation. Try again or edit the input.", str(exc)) from exc
+
+
+def parse_recipe_video(data: bytes, mime_type: str, caption: str = "") -> Recipe:
+    """Extract a recipe from an uploaded video plus optional caption text. A caption that is a single URL
+    (e.g. the Reel's link) becomes source_url instead of being sent to the model."""
+    if not data:
+        raise ServiceError("The video file is empty.")
+    if mime_type not in VIDEO_TYPES.values():
+        raise ServiceError("Unsupported video format. Upload an MP4, MOV or WEBM file.")
+    if len(data) > MAX_VIDEO_MB * 1024 * 1024:
+        raise ServiceError(f"The video is larger than {MAX_VIDEO_MB} MB. Upload a shorter clip.")
+    caption = (caption or "").strip()
+    source_url = caption if is_url(caption) else None
+    try:
+        payload = extract_recipe_from_video(data, mime_type, "" if source_url else caption)
+    except ProviderUnavailableError as exc:
+        raise ProviderUnavailableError(
+            exc.user_message + " Videos can only be read by Gemini - or paste the recipe text instead.", exc.detail
+        ) from exc
+    return _to_recipe(payload, source_url)
 
 
 def parse_recipe(raw_text: str, source_url: str | None = None, provider: Provider = "auto") -> Recipe:
