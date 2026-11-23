@@ -29,8 +29,8 @@ All arguments and return values are JSON-compatible. Tools never raise to the ag
 ## UI-only Functions (not exposed to the agent)
 
 - `parse_recipe_draft(text_or_url: str) -> dict` - used by the "Process Recipe" button.
-- `parse_recipe_video_draft(data: bytes, mime_type: str, caption: str = "") -> dict` - "Process Recipe" with an uploaded
-  video; Gemini only (ADR-016).
+- `parse_recipe_media_draft(files: list[tuple[bytes, str]], caption: str = "") -> dict` - "Process Recipe" with one
+  uploaded video or up to 5 photos, as `(data, mime_type)` pairs; Gemini only (ADR-016).
 - `list_saved_recipes(refresh: bool = False) -> list[RecipeSummary]` - all saved recipes sorted by name, for the
   "My Recipes" table; `refresh=True` skips the 60 s recipe cache (ADR-015). Raises `ServiceError`.
 - `find_duplicate_recipes(draft: dict) -> list[DuplicateMatch]` - saved recipes with the same name or source URL

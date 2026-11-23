@@ -99,7 +99,9 @@ Chronological log of important AI-related implementation decisions, experiments,
   answered. One tool call, `browse_recipes()` with no filters; 5 picks, all real recipes, each with a reason from
   its ingredients (Baked Feta Pasta first: red pepper flakes + tomato/lemon/basil). It said that no recipe is clearly
   both light and spicy, and pointed to the curry as spicy but heavier. Pass.
-- Video: covered by offline tests (fake Gemini client); a live check with a real Reel is still open (HANDOFF).
+- Video / photos: covered by offline tests (fake Gemini client). Live photo test (generated recipe card): upload
+  went through, but the request hit the Gemini free-tier daily limit (429, 20/day) - the app showed the
+  "Gemini only - paste the text instead" message. A live check is still open (HANDOFF).
 
 ## Log Entry Template
 

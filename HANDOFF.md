@@ -8,13 +8,13 @@ This file is **overwritten**, not appended - history lives in git log and `AI_LO
 - MVP is complete and verified against **live** Gemini, Claude and Notion (2026-11-22): text/URL extraction, review
   form, save to Notion, cookbook agent with short conversation memory (follow-ups like "yes" work), Enter submits
   a question; Add Recipe submits with Ctrl+Enter and clears its input after a successful save.
-- Offline test suite: 140 tests, all passing. Evaluation done (Step 6-8, results in `AI_LOG.md`).
+- Offline test suite: 146 tests, all passing. Evaluation done (Step 6-8, results in `AI_LOG.md`).
 - Optional Claude fallback (ADR-012, `claude-haiku-5-5`) when Gemini hits its limit; optional password screen
   (`APP_PASSWORD`, ADR-013) for the deployed app.
 - Duplicate warning in the review form (ADR-014): same name or same source URL as a saved recipe -> warning with
   a link; saving is still allowed.
 - "My Recipes" table (toggle, no AI request) and a 60 s recipe-list cache cleared on save (ADR-015).
-- Video upload in Add Recipe, Gemini only (ADR-016); vague requests ("light, summery, slightly spicy") via the
+- Video or photo upload in Add Recipe, Gemini only (ADR-016); vague requests ("light, summery, slightly spicy") via the
   `browse_recipes` agent tool - the model picks from compact summaries (ADR-017).
 - Notion: shared database "Recipes" on the page "Recipe Assistant (app data)", 10 fixture recipes as demo data.
 - **Deployed:** https://mis-ai-recipe-assistant.streamlit.app/.
@@ -23,8 +23,9 @@ This file is **overwritten**, not appended - history lives in git log and `AI_LO
 
 1. [x] Deployed to Streamlit Community Cloud by Marek: https://mis-ai-recipe-assistant.streamlit.app/ - later pushes to
    `main` redeploy automatically (reboot after new imports, see Gotchas). Secrets live in the app settings, never in git.
-2. [ ] Test video upload live with a real short recipe Reel (MP4), with and without the caption; check that
-   amounts only visible in the picture stay empty. Then reboot the deployed app (see Gotchas).
+2. [ ] Test video/photo upload live (Gemini quota was used up on 2026-11-23): a short recipe Reel (MP4) with and
+   without the caption, and 1-2 photos of a cookbook page; amounts only visible in the picture must stay empty.
+   Then merge, push and reboot the deployed app (see Gotchas).
 3. [ ] Optional: re-run the Gemini eval cases `--only 03,06,07,11` (quota ran out) for a full Gemini vs. Claude comparison.
 4. [ ] Optional: decide whether the 10 fixture recipes stay as demo data in Notion.
 
@@ -65,8 +66,8 @@ Nothing.
 ## Last Session
 
 - 2026-11-23, MLabska + Claude Code (branch `feat/video-and-vague-search`): bonus features 1 and 2 from
-  `PROJECT_CONTEXT.md`. Video upload via the Gemini Files API (upload -> wait -> extract -> delete; a link in the
-  caption field becomes `source_url`). Agent tool `browse_recipes` + instruction 3a for vague requests; live check
-  passed (see `AI_LOG.md`). Also: `source_url` can no longer come from the model for text input. 140 tests green.
+  `PROJECT_CONTEXT.md`. Video or up to 5 photos via the Gemini Files API (upload -> wait -> extract -> delete; a
+  link in the caption field becomes `source_url`). A pasted Reel URL does not work (Instagram login page) - by design. Agent tool `browse_recipes` + instruction 3a for vague requests; live check
+  passed (see `AI_LOG.md`). Also: `source_url` can no longer come from the model for text input. 146 tests green.
   Earlier the same day (merged): duplicate warning (ADR-014), recipe cache + My Recipes (ADR-015).
-- Left unfinished: live video test (Next Up 2).
+- Left unfinished: live video/photo test (Next Up 2) - branch not merged yet.

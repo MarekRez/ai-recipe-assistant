@@ -127,18 +127,22 @@
   ~20 free Gemini requests per day. Still deterministic, no new dependency; a module-level dict instead of
   `st.cache_data` keeps Streamlit out of `services/`.
 
-## ADR-016: Recipe Extraction From an Uploaded Video
+## ADR-016: Recipe Extraction From an Uploaded Video or Photos
 
 - Date: 2026-11-23
-- Decision: Add Recipe accepts an uploaded MP4/MOV/WEBM (max 100 MB, `MAX_VIDEO_MB` = `server.maxUploadSize`),
-  optionally with the caption pasted in the text field. The video goes to the Gemini Files API, the app waits until
-  it is processed (max 120 s), extracts with the same rules as text plus video rules (amounts only when said or
-  written, never read off the picture), then deletes the upload. A caption that is just a link (e.g. the Reel URL)
-  becomes `source_url` and is not sent to the model. Same review form and duplicate check afterwards.
-  Video is Gemini-only: Claude cannot read video, so on a Gemini outage the user is told to try later or paste text.
-  Not an agent tool - the chat cannot take files. No Instagram downloading (non-goal in `PROJECT_CONTEXT.md`).
-- Why: Bonus feature 1 in `PROJECT_CONTEXT.md`. Gemini reads video natively, so no new dependency or transcription
-  step. The Files API works for any Reel size, unlike inline bytes (~20 MB request limit).
+- Decision: Add Recipe accepts one uploaded video (MP4/MOV/WEBM) or up to 5 photos/screenshots (JPG/PNG/WEBP/HEIC)
+  - never mixed - max 100 MB per file (`MAX_UPLOAD_MB` = `server.maxUploadSize`), optionally with the caption pasted
+  in the text field. The files go to the Gemini Files API, the app waits until they are processed (max 120 s),
+  extracts one recipe in one request with the text rules plus media rules (amounts only when said or written, never
+  read off the picture; several photos are one recipe, in order), then deletes the uploads. A caption that is just
+  a link (e.g. the Reel URL) becomes `source_url` and is not sent to the model. Same review form and duplicate check.
+  Gemini-only: Claude cannot read video; for photos a Claude fallback would be possible later (it does not take
+  HEIC and limits image size, so it would need resizing). On a Gemini outage the user is told to paste text instead.
+  Not an agent tool - the chat cannot take files. No Instagram downloading: a pasted Reel URL goes through the normal
+  URL path, which Instagram blocks with a login page (non-goal in `PROJECT_CONTEXT.md`).
+- Why: Bonus feature 1 in `PROJECT_CONTEXT.md`; photos (cookbook pages, handwritten cards, caption screenshots)
+  reuse the same path. Gemini reads both natively, so no new dependency, OCR or transcription step. The Files API
+  works for any Reel or phone-photo size, unlike inline bytes (~20 MB per request).
 - Also: `source_url` is now always set from the input (or `None`) for text extraction too - before, a URL invented
   by the model could survive when the input was plain text (CLAUDE.md invariant).
 

@@ -4,7 +4,7 @@ Minimal semester MVP proving an end-to-end AI agent workflow for recipe knowledg
 
 ## What This Project Demonstrates
 
-1. Add recipe input from plain text, URL or an uploaded video (Gemini reads the video).
+1. Add recipe input from plain text, URL, an uploaded video or photos (Gemini reads them).
 2. Extract normalized structured recipe data with an LLM (Gemini, JSON schema mode).
 3. Let the user review and edit extracted data before saving.
 4. Save confirmed recipes to Notion.
