@@ -6,7 +6,8 @@ This file is **overwritten**, not appended - history lives in git log and `AI_LO
 ## Status
 
 - MVP is complete and verified against **live** Gemini, Claude and Notion (2026-11-22): text/URL extraction, review
-  form, save to Notion, cookbook agent with short conversation memory (follow-ups like "yes" work), Enter submits.
+  form, save to Notion, cookbook agent with short conversation memory (follow-ups like "yes" work), Enter submits
+  a question; Add Recipe submits with Ctrl+Enter and clears its input after a successful save.
 - Offline test suite: 103 tests, all passing. Evaluation done (Step 6-8, results in `AI_LOG.md`).
 - Optional Claude fallback (ADR-012, `claude-haiku-5-5`) when Gemini hits its limit; optional password screen
   (`APP_PASSWORD`, ADR-013) for the deployed app.
@@ -63,13 +64,14 @@ Nothing.
 - Getting the Notion secret + `NOTION_DATA_SOURCE_ID`: ask a teammate privately (shared database, see Decisions).
 - Streamlit Cloud: a failed deploy can look like "nothing happens" after clicking Deploy - check the browser network
   tab (`/api/v1/deploy` status). Secret changes take about a minute to reach the running app.
+- Push `403 ... denied to LabskaSchool` on MLabska's laptop: Git Credential Manager has the wrong GitHub account.
+  This clone now uses `gh` (logged in as MLabska) only: `git config credential.helper ""` then
+  `git config --add credential.helper "!gh auth git-credential"` (the empty entry drops the system `manager`).
 
 ## Last Session
 
-- 2026-11-22, MLabska + Claude Code (branches `feat/evaluation`, `feat/claude-fallback`, `feat/evaluation-claude`,
-  `feat/agent-memory`, `feat/deploy`, all merged): eval answer key review, eval fixes, optional Claude fallback,
-  full eval + agent scenarios on Claude Haiku, short agent memory, Enter-to-submit, password screen for deployment.
-  Deployment attempt from MLabska's Streamlit account failed with 403 (needs repo admin) - handed to Marek.
-  Then (branch `feat/ui-theme`): green theme in `.streamlit/config.toml`, chef avatar,
-  "Agent is cooking..." spinner, green primary buttons.
-- Left unfinished: nothing; deployment is item 1 for Marek.
+- 2026-11-23, MLabska + Claude Code (branch `feat/add-recipe-input`, merged): Add Recipe input is now a form -
+  Ctrl+Enter processes it (plain Enter stays a newline for pasted text); the input clears after a successful save
+  but keeps its text on errors or discard (versioned widget key `input_version` in `app.py`). Tested by hand,
+  103 tests green. Fixed push credentials for this clone (see Gotchas).
+- Left unfinished: nothing; deployment is still item 1 for Marek.
