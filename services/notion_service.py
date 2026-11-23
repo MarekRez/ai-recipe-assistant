@@ -6,9 +6,12 @@ queried via `data_sources.query`. See docs/NOTION_SETUP.md for the required prop
 
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import re
+import threading
+import time
 
 import httpx
 from notion_client import APIErrorCode, APIResponseError, Client
@@ -45,6 +48,12 @@ TEXT_CHUNK = 2000  # Notion limit per rich_text item / block text
 MAX_RICH_TEXT_ITEMS = 100
 MAX_CHILD_BLOCKS = 100
 _NOTION_ID_RE = re.compile(r"^[0-9a-f]{32}$")
+
+# Recipe list cache (ADR-015): every search, name lookup and duplicate check needs all recipes, and one agent
+# answer can make several of those calls. Shared by all sessions of the app process (one shared database).
+CACHE_TTL_SECONDS = 60
+_cache_lock = threading.Lock()
+_cache: dict = {"key": None, "at": 0.0, "records": None}
 
 
 # ---------------------------------------------------------------------------
@@ -202,13 +211,27 @@ def save_recipe_to_notion(recipe: Recipe) -> dict:
         properties=recipe_to_properties(recipe),
         children=recipe_to_blocks(recipe),
     )
+    clear_recipe_cache()  # the next read must include the new recipe
     return {"id": page["id"], "url": page.get("url")}
 
 
+def clear_recipe_cache() -> None:
+    with _cache_lock:
+        _cache.update(key=None, at=0.0, records=None)
+
+
 def list_all_recipes() -> list[dict]:
-    pages = _call(collect_paginated_api, _client().data_sources.query, data_source_id=_data_source_id())
+    """All saved recipes, cached for CACHE_TTL_SECONDS. Edits made directly in Notion show up after that."""
+    key = _data_source_id()
+    with _cache_lock:
+        if _cache["key"] == key and time.monotonic() - _cache["at"] < CACHE_TTL_SECONDS:
+            return copy.deepcopy(_cache["records"])  # callers may change their copy
+    pages = _call(collect_paginated_api, _client().data_sources.query, data_source_id=key)
     records = (page_to_record(p) for p in pages if not p.get("in_trash") and not p.get("archived"))
-    return [r for r in records if r is not None]
+    result = [r for r in records if r is not None]
+    with _cache_lock:
+        _cache.update(key=key, at=time.monotonic(), records=copy.deepcopy(result))
+    return result
 
 
 def search_recipes_in_notion(filters: SearchFilters) -> list[dict]:

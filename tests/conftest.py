@@ -30,6 +30,16 @@ def _fake_env(monkeypatch):
         monkeypatch.setenv(name, "")
 
 
+@pytest.fixture(autouse=True)
+def _empty_recipe_cache():
+    # The Notion recipe cache is module-level; without this a test could see another test's fake recipes.
+    from services.notion_service import clear_recipe_cache
+
+    clear_recipe_cache()
+    yield
+    clear_recipe_cache()
+
+
 @pytest.fixture
 def sample_records() -> list[dict]:
     """Stored records (Recipe + id/url) built from the fixture recipes."""

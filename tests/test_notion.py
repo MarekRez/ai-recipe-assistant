@@ -168,6 +168,47 @@ def test_find_duplicates_reads_the_saved_recipes(fake_client):
     assert ns.find_duplicate_recipes_in_notion("Pizza", None) == []
 
 
+def test_recipe_list_is_cached_until_save(fake_client):
+    ns.save_recipe_to_notion(curry())
+    assert len(ns.list_all_recipes()) == 1
+    ns.list_all_recipes()
+    ns.get_recipe_from_notion("curry")
+    assert len(fake_client.data_sources.query_kwargs) == 1  # one Notion query for three reads
+    ns.save_recipe_to_notion(Recipe(name="Salad"))  # a save clears the cache
+    assert [r["name"] for r in ns.list_all_recipes()] == ["Easy Chicken Curry", "Salad"]
+    assert len(fake_client.data_sources.query_kwargs) == 2
+
+
+def test_recipe_cache_expires(fake_client, monkeypatch):
+    now = [1000.0]
+    monkeypatch.setattr(ns.time, "monotonic", lambda: now[0])
+    ns.list_all_recipes()
+    now[0] += ns.CACHE_TTL_SECONDS - 1
+    ns.list_all_recipes()
+    assert len(fake_client.data_sources.query_kwargs) == 1
+    now[0] += 2
+    ns.list_all_recipes()
+    assert len(fake_client.data_sources.query_kwargs) == 2
+
+
+def test_cached_records_cannot_be_changed_by_callers(fake_client):
+    ns.save_recipe_to_notion(curry())
+    ns.list_all_recipes()[0]["ingredients"].clear()
+    assert ns.list_all_recipes()[0]["ingredients"]
+
+
+def test_failed_read_is_not_cached(fake_client, monkeypatch):
+    def fail(**kwargs):
+        raise httpx.ConnectError("down")
+
+    original = fake_client.data_sources.query
+    monkeypatch.setattr(fake_client.data_sources, "query", fail)
+    with pytest.raises(ServiceError):
+        ns.list_all_recipes()
+    monkeypatch.setattr(fake_client.data_sources, "query", original)
+    assert ns.list_all_recipes() == []
+
+
 def test_get_recipe_by_id(fake_client):
     fake_client.store.append(as_page(ns.recipe_to_properties(curry()), page_id="0123456789abcdef0123456789abcdef"))
     assert ns.get_recipe_from_notion("01234567-89ab-cdef-0123-456789abcdef")["name"] == "Easy Chicken Curry"
