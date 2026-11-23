@@ -37,17 +37,18 @@ Strict rules:
 
 EXTRACTION_PROMPT = EXTRACTION_RULES + "\nSource text:\n"
 
-VIDEO_PROMPT = EXTRACTION_RULES + """11. The source is the attached video plus the caption below. Use what is said, what is shown as written
-    text (on-screen captions, labels) and the caption. Never read amounts off the picture (how full a cup looks,
-    how many pieces you see) - an amount counts only when it is said or written.
-12. raw: the ingredient as said or written in the video or caption.
-13. Instructions: the steps as said, written or clearly shown, in order. If the video does not show a recipe at all,
-    return {"name": "NOT_A_RECIPE"}.
+MEDIA_PROMPT = EXTRACTION_RULES + """11. The source is the attached video or photos (cookbook pages, handwritten cards, screenshots) plus the
+    caption below. Use what is said, what is written (on-screen text, printed or handwritten text, screenshots)
+    and the caption. Several photos belong to one recipe - read them in order. Never read amounts off the picture
+    (how full a cup looks, how many pieces you see) - an amount counts only when it is said or written.
+12. raw: the ingredient as said or written in the source.
+13. Instructions: the steps as said, written or clearly shown, in order. If the source does not show a recipe at
+    all, return {"name": "NOT_A_RECIPE"}.
 
 Caption / extra text from the user (may be empty):
 """
 
-VIDEO_PROCESSING_TIMEOUT = 120  # seconds Gemini may take to process an uploaded video before we give up
+MEDIA_PROCESSING_TIMEOUT = 120  # seconds Gemini may take to process uploaded files before we give up
 _POLL_SECONDS = 2
 
 
@@ -90,37 +91,48 @@ def extract_recipe_structured(raw_text: str) -> dict:
     return _generate(client, EXTRACTION_PROMPT + raw_text)
 
 
-def extract_recipe_from_video(data: bytes, mime_type: str, caption: str = "") -> dict:
-    """Upload a video to the Gemini Files API, extract the recipe from it, then delete the upload.
+def _wait_until_processed(client: genai.Client, uploaded, deadline: float):
+    while uploaded.state == types.FileState.PROCESSING:
+        if time.monotonic() > deadline:
+            raise ProviderUnavailableError("Gemini is taking too long to process the upload. Try again later.")
+        time.sleep(_POLL_SECONDS)
+        try:
+            uploaded = client.files.get(name=uploaded.name)
+        except genai_errors.APIError as exc:
+            raise _api_error(exc) from exc
+    if uploaded.state == types.FileState.FAILED:
+        raise ServiceError("Gemini could not read this file. Try another file or paste the recipe text.")
+    return uploaded
 
-    Uploading (instead of inline bytes) works for any Reel size; the file is removed right after the answer
-    (Gemini would otherwise keep it for 48 h).
+
+def extract_recipe_from_media(files: list[tuple[bytes, str]], caption: str = "") -> dict:
+    """Upload a video or photos (`(data, mime_type)` pairs) to the Gemini Files API, extract one recipe from them,
+    then delete the uploads.
+
+    Uploading (instead of inline bytes) works for any Reel or phone-photo size (inline requests are limited to
+    ~20 MB); the files are removed right after the answer (Gemini would otherwise keep them for 48 h).
     """
     client = _client()
+    uploads = []
     try:
-        uploaded = client.files.upload(
-            file=io.BytesIO(data), config=types.UploadFileConfig(mime_type=mime_type, display_name="recipe-video")
-        )
-    except genai_errors.APIError as exc:
-        raise _api_error(exc) from exc
-    try:
-        deadline = time.monotonic() + VIDEO_PROCESSING_TIMEOUT
-        while uploaded.state == types.FileState.PROCESSING:
-            if time.monotonic() > deadline:
-                raise ProviderUnavailableError("Gemini is taking too long to process the video. Try again later.")
-            time.sleep(_POLL_SECONDS)
+        for data, mime_type in files:
             try:
-                uploaded = client.files.get(name=uploaded.name)
+                uploads.append(
+                    client.files.upload(
+                        file=io.BytesIO(data), config=types.UploadFileConfig(mime_type=mime_type, display_name="recipe")
+                    )
+                )
             except genai_errors.APIError as exc:
                 raise _api_error(exc) from exc
-        if uploaded.state == types.FileState.FAILED:
-            raise ServiceError("Gemini could not read this video. Try another file or paste the recipe text.")
-        return _generate(client, [uploaded, VIDEO_PROMPT + (caption or "")])
+        deadline = time.monotonic() + MEDIA_PROCESSING_TIMEOUT
+        ready = [_wait_until_processed(client, u, deadline) for u in uploads]
+        return _generate(client, [*ready, MEDIA_PROMPT + (caption or "")])
     finally:
-        try:
-            client.files.delete(name=uploaded.name)
-        except Exception:  # cleanup only - Gemini deletes uploads after 48 h anyway
-            logger.warning("Could not delete uploaded video %s", uploaded.name, exc_info=True)
+        for uploaded in uploads:
+            try:
+                client.files.delete(name=uploaded.name)
+            except Exception:  # cleanup only - Gemini deletes uploads after 48 h anyway
+                logger.warning("Could not delete uploaded file %s", uploaded.name, exc_info=True)
 
 
 def _payload(text: str) -> dict:

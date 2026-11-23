@@ -18,10 +18,10 @@ from agent.tools import (
     find_duplicate_recipes,
     list_saved_recipes,
     parse_recipe_draft,
-    parse_recipe_video_draft,
+    parse_recipe_media_draft,
     save_recipe,
 )
-from services.recipe_parser import VIDEO_TYPES
+from services.recipe_parser import MAX_IMAGES, MEDIA_TYPES, VIDEO_TYPES
 from services.config import app_password, missing_settings
 from services.errors import ServiceError
 from services.notion_service import check_notion_setup
@@ -158,25 +158,34 @@ with st.form("add_recipe_form", border=False):
         "Paste recipe text or a recipe URL",
         height=180,
         key=f"recipe_input_{state.input_version}",
-        help="Press Ctrl+Enter to process. With a video: paste its caption or its link here (optional).",
+        help="Press Ctrl+Enter to process. With a video or photos: paste the caption or the link here (optional).",
     )
-    video = st.file_uploader(
-        "Or upload a recipe video (e.g. a downloaded Reel)",
-        type=list(VIDEO_TYPES),
-        key=f"recipe_video_{state.input_version}",
+    uploads = st.file_uploader(
+        f"Or upload a recipe video (e.g. a downloaded Reel) or up to {MAX_IMAGES} photos / screenshots",
+        type=list(MEDIA_TYPES),
+        accept_multiple_files=True,
+        key=f"recipe_media_{state.input_version}",
     )
     process_clicked = st.form_submit_button("Process Recipe", type="primary")
 
+
+def media_type(upload) -> str:
+    # From the extension: browsers report .mov / .heic types inconsistently.
+    return MEDIA_TYPES.get(upload.name.rsplit(".", 1)[-1].lower(), upload.type)
+
+
 if process_clicked:
-    if video is not None:
-        with st.spinner("Watching the video... 🎬 (this can take up to a minute)"):
+    if uploads:
+        files = [(u.getvalue(), media_type(u)) for u in uploads]
+        is_video = any(mime in VIDEO_TYPES.values() for _, mime in files)
+        message = "Watching the video... 🎬 (this can take up to a minute)" if is_video else "Reading the photos... 📸"
+        with st.spinner(message):
             try:
-                mime_type = VIDEO_TYPES.get(video.name.rsplit(".", 1)[-1].lower(), video.type)  # browsers vary for .mov
-                set_draft(parse_recipe_video_draft(video.getvalue(), mime_type, input_text))
+                set_draft(parse_recipe_media_draft(files, input_text))
             except ServiceError as exc:
                 st.error(exc.user_message)
     elif not input_text.strip():
-        st.warning("Please provide recipe text, a URL or a video.")
+        st.warning("Please provide recipe text, a URL, a video or photos.")
     else:
         with st.spinner("Reading the recipe... 🥕"):
             try:

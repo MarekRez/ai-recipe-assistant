@@ -225,8 +225,8 @@ def test_my_recipes_refresh_and_errors(monkeypatch):
     assert any("not reachable" in e.value for e in at.error)
 
 
-def test_add_recipe_offers_a_video_upload():
+def test_add_recipe_offers_a_video_or_photo_upload():
     at = AppTest.from_file(APP, default_timeout=30).run()
     assert not at.exception
-    # AppTest cannot upload files; the video path itself is covered in test_video.py.
+    # AppTest cannot upload files; the video/photo path itself is covered in test_media.py.
     assert len(at.get("file_uploader")) == 1

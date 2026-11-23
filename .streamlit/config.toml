@@ -8,4 +8,4 @@ textColor = "#1C2B1D"
 font = "sans serif"
 
 [server]
-maxUploadSize = 100  # MB, recipe videos (ADR-016); keep in sync with MAX_VIDEO_MB in services/recipe_parser.py
+maxUploadSize = 100  # MB per file, recipe videos and photos (ADR-016); keep in sync with MAX_UPLOAD_MB in services/recipe_parser.py
