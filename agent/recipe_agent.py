@@ -16,6 +16,7 @@ from agent.claude_agent import run_claude_agent
 from agent.tools import make_agent_tools
 from services.config import claude_fallback_enabled, get_setting
 from services.errors import ServiceError
+from services.gemini_service import DAILY_LIMIT_MESSAGE, is_daily_limit
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +120,8 @@ def ask_agent_with_provider(
         if not _is_provider_outage(detail):
             raise ServiceError("The agent could not answer this request. Try rephrasing it.", detail) from exc
         if not claude_fallback_enabled():
+            if is_daily_limit(detail):
+                raise ServiceError(DAILY_LIMIT_MESSAGE, detail) from exc
             raise ServiceError("Gemini rate limit reached or Gemini is unavailable. Try again later.", detail) from exc
         logger.warning("Gemini unavailable - answering with Claude")
         answer = run_claude_agent(task, make_agent_tools(on_draft), INSTRUCTIONS, MAX_STEPS)

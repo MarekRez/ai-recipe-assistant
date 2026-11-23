@@ -182,3 +182,123 @@ def test_smolagents_retry_is_off_when_fallback_is_configured(monkeypatch):
     assert recipe_agent.build_model().retryer.max_attempts == 1
     monkeypatch.setenv("ANTHROPIC_API_KEY", "")
     assert recipe_agent.build_model().retryer.max_attempts > 1
+
+
+# --- daily limit message --------------------------------------------------------------------------
+
+DAILY_429 = {
+    "error": {
+        "code": 429,
+        "message": "Quota exceeded for metric: generate_content_free_tier_requests, limit: 20. Generate content "
+        "requests per day limit exceeded on Free Tier.",
+        "status": "RESOURCE_EXHAUSTED",
+        "details": [{"violations": [{"quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier"}]}],
+    }
+}
+
+
+def _gemini_raising(monkeypatch, error):
+    class FailingModels:
+        @staticmethod
+        def generate_content(**kwargs):
+            raise error
+
+    monkeypatch.setattr(gemini_service, "_client", lambda: SimpleNamespace(models=FailingModels))
+
+
+def test_daily_quota_says_tomorrow_not_wait_a_minute(monkeypatch):
+    _gemini_raising(monkeypatch, genai_errors.APIError(429, DAILY_429))
+    with pytest.raises(ProviderUnavailableError) as info:
+        gemini_service.extract_recipe_structured("text")
+    assert "daily" in info.value.user_message and "tomorrow" in info.value.user_message
+    assert "Wait a minute" not in info.value.user_message
+
+
+def test_per_minute_limit_still_says_wait_a_minute(monkeypatch):
+    _gemini_raising(monkeypatch, genai_errors.APIError(429, {"error": {"code": 429, "message": "per minute"}}))
+    with pytest.raises(ProviderUnavailableError, match="Wait a minute"):
+        gemini_service.extract_recipe_structured("text")
+
+
+def test_agent_reports_daily_limit_without_claude(monkeypatch):
+    class DailyLimitModel(ScriptedModel):
+        def generate(self, *args, **kwargs):
+            raise RuntimeError("Error code: 429 - Generate content requests per day limit exceeded on Free Tier")
+
+    with pytest.raises(ServiceError, match="daily request limit"):
+        recipe_agent.ask_agent("dinner ideas", model=DailyLimitModel([]))
+
+
+# --- photo fallback (ADR-016) ---------------------------------------------------------------------
+
+
+def _png(width=40, height=20) -> bytes:
+    import io
+
+    from PIL import Image
+
+    out = io.BytesIO()
+    Image.new("RGB", (width, height), "white").save(out, format="PNG")
+    return out.getvalue()
+
+
+@pytest.fixture
+def gemini_media_down(monkeypatch):
+    def down(files, caption):
+        raise ProviderUnavailableError(gemini_service.DAILY_LIMIT_MESSAGE, "429 PerDay")
+
+    monkeypatch.setattr(recipe_parser, "extract_recipe_from_media", down)
+
+
+def test_photos_fall_back_to_claude_when_gemini_is_down(monkeypatch, gemini_media_down):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    sent = {}
+    response = SimpleNamespace(stop_reason="end_turn", parsed_output=SimpleNamespace(model_dump=lambda mode: dict(SOUP)))
+    monkeypatch.setattr(claude_service, "_client", lambda: _claude_client(response, sent))
+    photos = [(_png(), "image/png"), (_png(), "image/jpeg")]
+    recipe, provider = recipe_parser.parse_recipe_media_with_provider(photos, "https://example.com/card")
+    assert provider == "claude" and recipe.name == SOUP["name"]
+    assert recipe.source_url == "https://example.com/card"  # from the input, not the model
+    content = sent["messages"][0]["content"]
+    assert [b["type"] for b in content] == ["image", "image", "text"]  # photos in order, then the prompt
+    assert all(b["source"]["media_type"] == "image/jpeg" for b in content[:2])  # re-encoded
+    assert content[2]["text"] == gemini_service.MEDIA_PROMPT  # the link is not sent to the model
+    assert "temperature" not in sent
+
+
+@pytest.mark.parametrize("mime", ["video/mp4", "image/heic"])
+def test_video_and_heic_have_no_claude_fallback(monkeypatch, gemini_media_down, mime):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    monkeypatch.setattr(claude_service, "extract_recipe_from_images", lambda *a: pytest.fail("no Claude for this"))
+    with pytest.raises(ProviderUnavailableError, match="can only be read by Gemini") as info:
+        recipe_parser.parse_recipe_media([(b"data", mime)])
+    assert "tomorrow" in info.value.user_message  # the daily-limit reason is kept
+
+
+def test_no_photo_fallback_without_anthropic_key(monkeypatch, gemini_media_down):
+    monkeypatch.setattr(claude_service, "extract_recipe_from_images", lambda *a: pytest.fail("no key, no Claude"))
+    with pytest.raises(ProviderUnavailableError, match="Paste the recipe text"):
+        recipe_parser.parse_recipe_media([(_png(), "image/png")])
+
+
+def test_photos_are_shrunk_rotated_and_reencoded_for_claude():
+    import io
+
+    from PIL import Image
+
+    big = io.BytesIO()
+    img = Image.new("RGB", (4000, 1000), "white")
+    exif = img.getexif()
+    exif[0x0112] = 6  # EXIF orientation: rotate 90 degrees (typical phone portrait photo)
+    img.save(big, format="JPEG", exif=exif)
+    with Image.open(io.BytesIO(claude_service.to_claude_jpeg(big.getvalue()))) as out:
+        assert out.format == "JPEG"
+        assert max(out.size) == claude_service.CLAUDE_MAX_IMAGE_EDGE
+        assert out.size[1] > out.size[0]  # rotation applied: now portrait
+    with Image.open(io.BytesIO(claude_service.to_claude_jpeg(_png(40, 20)))) as small:
+        assert small.size == (40, 20)  # never enlarged
+
+
+def test_unreadable_photo_is_a_clear_error():
+    with pytest.raises(ServiceError, match="could not be opened"):
+        claude_service.to_claude_jpeg(b"not an image")

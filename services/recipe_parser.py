@@ -98,17 +98,31 @@ def parse_recipe_media(files: list[tuple[bytes, str]], caption: str = "") -> Rec
 
     A caption that is a single URL (e.g. the Reel's link) becomes source_url instead of being sent to the model.
     """
+    return parse_recipe_media_with_provider(files, caption)[0]
+
+
+def parse_recipe_media_with_provider(files: list[tuple[bytes, str]], caption: str = "") -> tuple[Recipe, str]:
+    """Like `parse_recipe_media`, also reporting which model answered.
+
+    Gemini first. On a Gemini outage, photos (JPEG/PNG/WEBP) go to Claude if ANTHROPIC_API_KEY is set; video and
+    HEIC have no fallback, because Claude cannot read video and HEIC needs an extra plugin to convert.
+    """
     _check_media(files)
     caption = (caption or "").strip()
     source_url = caption if is_url(caption) else None
+    model_caption = "" if source_url else caption
     try:
-        payload = extract_recipe_from_media(files, "" if source_url else caption)
+        return _to_recipe(extract_recipe_from_media(files, model_caption), source_url), "gemini"
     except ProviderUnavailableError as exc:
-        raise ProviderUnavailableError(
-            exc.user_message + " Videos and photos can only be read by Gemini - or paste the recipe text instead.",
-            exc.detail,
-        ) from exc
-    return _to_recipe(payload, source_url)
+        claude_can_read = all(mime in claude_service.CLAUDE_IMAGE_TYPES for _, mime in files)
+        if claude_fallback_enabled() and claude_can_read:
+            logger.warning("Gemini unavailable (%s) - reading the photos with Claude", exc.user_message)
+            payload = claude_service.extract_recipe_from_images([data for data, _ in files], model_caption)
+            return _to_recipe(payload, source_url), "claude"
+        hint = "Paste the recipe text instead."
+        if claude_fallback_enabled() and not claude_can_read:
+            hint = "Videos and HEIC photos can only be read by Gemini - upload JPG/PNG photos or paste the recipe text."
+        raise ProviderUnavailableError(f"{exc.user_message} {hint}", exc.detail) from exc
 
 
 def parse_recipe(raw_text: str, source_url: str | None = None, provider: Provider = "auto") -> Recipe:

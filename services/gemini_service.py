@@ -56,9 +56,20 @@ def _client() -> genai.Client:
     return genai.Client(api_key=get_setting("GEMINI_API_KEY"))
 
 
+DAILY_LIMIT_MESSAGE = "Gemini's free daily request limit is used up. It resets within 24 hours - try again tomorrow."
+_DAILY_LIMIT_MARKERS = ("PerDay", "per day")  # quotaId "GenerateRequestsPerDay..." / "requests per day limit"
+
+
+def is_daily_limit(detail: str) -> bool:
+    """A 429 for the daily free-tier quota (waiting a minute will not help) rather than the per-minute limit."""
+    return any(marker in detail for marker in _DAILY_LIMIT_MARKERS)
+
+
 def _api_error(exc: genai_errors.APIError) -> ServiceError:
     logger.exception("Gemini request failed")
     if exc.code == 429:
+        if is_daily_limit(str(exc)):
+            return ProviderUnavailableError(DAILY_LIMIT_MESSAGE, str(exc))
         return ProviderUnavailableError("Gemini rate limit reached. Wait a minute and try again.", str(exc))
     if exc.code in (400, 401, 403, 404):
         return ServiceError("Gemini rejected the request. Check GEMINI_API_KEY and GEMINI_MODEL.", str(exc))
