@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from pydantic import ValidationError
 
 from agent.recipe_agent import ask_agent
-from agent.tools import parse_recipe_draft, save_recipe
+from agent.tools import find_duplicate_recipes, parse_recipe_draft, save_recipe
 from services.config import app_password, missing_settings
 from services.errors import ServiceError
 from services.notion_service import check_notion_setup
@@ -43,6 +43,7 @@ if password and not state.get("authenticated"):
     st.stop()
 state.setdefault("draft", None)
 state.setdefault("draft_version", 0)
+state.setdefault("duplicates", [])  # saved recipes that look like the current draft (ADR-014)
 state.setdefault("history", [])  # [{"question", "answer"}] - short agent memory, this session only
 state.setdefault("flash", None)
 state.setdefault("input_version", 0)  # bumped after a save to clear the Add Recipe field
@@ -51,6 +52,26 @@ state.setdefault("input_version", 0)  # bumped after a save to clear the Add Rec
 def set_draft(draft: dict | None) -> None:
     state.draft = draft
     state.draft_version += 1  # forces fresh form widgets for a new draft
+    state.duplicates = check_duplicates(draft) if draft else []
+
+
+def check_duplicates(draft: dict) -> list[dict]:
+    """Checked once per draft. A failed check only means no warning - it must never block saving."""
+    try:
+        return find_duplicate_recipes(draft)
+    except ServiceError as exc:
+        logging.getLogger(__name__).warning("Duplicate check failed: %s (%s)", exc.user_message, exc.detail)
+        return []
+
+
+def duplicate_warning(duplicates: list[dict]) -> str:
+    lines = ["**This recipe may already be in your cookbook:**"]
+    for dup in duplicates:
+        reason = " and ".join(r for r, hit in (("same name", dup["same_name"]), ("same source URL", dup["same_source_url"])) if hit)
+        name = f"[{dup['name']}]({dup['url']})" if dup.get("url") else dup["name"]
+        lines.append(f"- {name} ({reason})")
+    lines.append("Saving will create a second copy. Discard the draft if you do not need it.")
+    return "\n".join(lines)
 
 
 def _none_if_blank(value):
@@ -135,6 +156,8 @@ if draft:
     v = state.draft_version
     st.markdown("#### Review before saving")
     st.caption("Check every field. Empty means the source did not state it - leave it empty rather than guessing.")
+    if state.duplicates:
+        st.warning(duplicate_warning(state.duplicates))
     with st.form(f"review_{v}"):
         name = st.text_input("Name", value=draft.get("name") or "")
         col1, col2, col3 = st.columns(3)

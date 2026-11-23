@@ -31,4 +31,4 @@ Remaining: run against real Gemini + Notion credentials and fix whatever the liv
 
 1. MP4/Reel upload parsing.
 2. Improved semantic query handling.
-3. Duplicate detection.
+3. ~~Duplicate detection.~~ Done: warning in the review form (ADR-014).

@@ -7,9 +7,18 @@ from streamlit.testing.v1 import AppTest
 
 from agent import recipe_agent, tools
 from models.recipe import Recipe
+from services.errors import ServiceError
 from tests.conftest import load_expected
 
 APP = str(Path(__file__).resolve().parent.parent / "app.py")
+
+
+@pytest.fixture(autouse=True)
+def no_duplicates(monkeypatch):
+    """The duplicate check would read Notion; tests that need duplicates override this."""
+    checked = []
+    monkeypatch.setattr(tools, "find_duplicate_recipes", lambda draft: checked.append(draft) or [])
+    return checked
 
 
 @pytest.fixture
@@ -120,3 +129,43 @@ def test_password_screen_blocks_the_app(monkeypatch):
 def test_no_password_screen_without_app_password():
     at = AppTest.from_file(APP, default_timeout=30).run()
     assert not any(t.label == "Password" for t in at.text_input)
+
+
+# --- duplicate detection (ADR-014) ---------------------------------------------------------------
+
+EXISTING = {
+    "id": "p0", "name": "Red Lentil Soup", "url": "https://notion.so/p0", "total_time_minutes": None,
+    "category": "Soup", "vegetarian": True, "tags": [], "same_name": True, "same_source_url": False,
+}
+
+
+def test_duplicate_draft_shows_a_warning_but_can_still_be_saved(monkeypatch, saved, no_duplicates):
+    monkeypatch.setattr(tools, "find_duplicate_recipes", lambda draft: no_duplicates.append(draft) or [EXISTING])
+    at = process(AppTest.from_file(APP, default_timeout=30).run())
+    assert not at.exception
+    warning = next(w.value for w in at.warning if "already be in your cookbook" in w.value)
+    assert "[Red Lentil Soup](https://notion.so/p0)" in warning and "same name" in warning
+    assert len(no_duplicates) == 1  # checked once per draft, not on every rerun
+    next(b for b in at.button if b.label == "Save to Notion").click()
+    at.run()
+    assert len(saved) == 1  # a warning, not a block
+    assert not any("already be in your cookbook" in w.value for w in at.warning)  # cleared with the draft
+
+
+def test_no_warning_for_a_new_recipe(saved, no_duplicates):
+    at = process(AppTest.from_file(APP, default_timeout=30).run())
+    assert no_duplicates and no_duplicates[0]["name"] == "Red Lentil Soup"
+    assert not any("already be in your cookbook" in w.value for w in at.warning)
+
+
+def test_failed_duplicate_check_does_not_block_the_review(monkeypatch, saved):
+    def broken(draft):
+        raise ServiceError("Notion is not reachable right now. Try again later.")
+
+    monkeypatch.setattr(tools, "find_duplicate_recipes", broken)
+    at = process(AppTest.from_file(APP, default_timeout=30).run())
+    assert not at.exception and not at.error
+    assert at.text_input[0].value == "Red Lentil Soup"
+    next(b for b in at.button if b.label == "Save to Notion").click()
+    at.run()
+    assert len(saved) == 1

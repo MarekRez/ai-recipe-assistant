@@ -99,3 +99,17 @@
   (compared with `hmac.compare_digest`, remembered for the browser session). Unset = no screen (local development).
 - Why: The deployed app holds the team's API keys (Gemini quota, Claude credits) and writes to the shared Notion
   database. Real user accounts are out of MVP scope; a shared password for the team and the teacher is enough.
+
+## ADR-014: Duplicate Recipe Warning Before Save
+
+- Date: 2026-11-23
+- Decision: When a draft reaches the review form (Process Recipe or the agent's `parse_recipe`), the app checks
+  the saved recipes once (`agent.tools.find_duplicate_recipes` -> `services/recipe_search.find_duplicates`) and shows
+  a warning with links to matching Notion pages. A match is the same name (ignoring case, spacing and punctuation)
+  or the same source URL (ignoring http/https, `www.`, trailing slash, `#fragment` and tracking parameters such as
+  `utm_*`/`fbclid`; other query parameters count, e.g. `?id=2`). Saving is still allowed - the user decides.
+  A failed check (Notion down) only means no warning; it never blocks the review or the save.
+- Why: Bonus feature 3 in `PROJECT_CONTEXT.md`. Deterministic and cheap (one Notion read, no LLM request), in line
+  with ADR-009. Fuzzy name matching ("Chicken Curry" vs. "Easy Chicken Curry") was left out: it would warn about
+  genuinely different recipes, and a warning that is often wrong gets ignored. Not an agent tool: the agent has no
+  save step to guard, and the review form shows the warning for agent drafts as well.
