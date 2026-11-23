@@ -50,6 +50,10 @@ What Notion reads return: all Recipe fields plus `id` (Notion page id), `url` (N
  "vegetarian": "boolean|null", "tags": ["string"], "url": "string"}
 ```
 
+## Browse Entry (`BrowseEntry`, ADR-017)
+
+`RecipeSummary` without `url`, plus `"ingredients": ["string"]` (ingredient names only - no quantities or steps).
+
 ## Duplicate Match (`DuplicateMatch`, ADR-014)
 
 `RecipeSummary` plus `"same_name": bool` and `"same_source_url": bool` (at least one is `true`).

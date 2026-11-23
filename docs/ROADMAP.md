@@ -29,6 +29,6 @@ Remaining: run against real Gemini + Notion credentials and fix whatever the liv
 
 ## Post-MVP Backlog
 
-1. MP4/Reel upload parsing.
-2. Improved semantic query handling.
+1. ~~MP4/Reel upload parsing.~~ Done: video upload in Add Recipe (ADR-016).
+2. ~~Improved semantic query handling.~~ Done: `browse_recipes` for vague requests (ADR-017).
 3. ~~Duplicate detection.~~ Done: warning in the review form (ADR-014).

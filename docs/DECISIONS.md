@@ -126,3 +126,31 @@
   answer often makes 2-3 of these calls (~0.7 s each, measured live). Seeing what is saved should not cost one of the
   ~20 free Gemini requests per day. Still deterministic, no new dependency; a module-level dict instead of
   `st.cache_data` keeps Streamlit out of `services/`.
+
+## ADR-016: Recipe Extraction From an Uploaded Video
+
+- Date: 2026-11-23
+- Decision: Add Recipe accepts an uploaded MP4/MOV/WEBM (max 100 MB, `MAX_VIDEO_MB` = `server.maxUploadSize`),
+  optionally with the caption pasted in the text field. The video goes to the Gemini Files API, the app waits until
+  it is processed (max 120 s), extracts with the same rules as text plus video rules (amounts only when said or
+  written, never read off the picture), then deletes the upload. A caption that is just a link (e.g. the Reel URL)
+  becomes `source_url` and is not sent to the model. Same review form and duplicate check afterwards.
+  Video is Gemini-only: Claude cannot read video, so on a Gemini outage the user is told to try later or paste text.
+  Not an agent tool - the chat cannot take files. No Instagram downloading (non-goal in `PROJECT_CONTEXT.md`).
+- Why: Bonus feature 1 in `PROJECT_CONTEXT.md`. Gemini reads video natively, so no new dependency or transcription
+  step. The Files API works for any Reel size, unlike inline bytes (~20 MB request limit).
+- Also: `source_url` is now always set from the input (or `None`) for text extraction too - before, a URL invented
+  by the model could survive when the input was plain text (CLAUDE.md invariant).
+
+## ADR-017: Vague Requests - the Model Picks From Compact Recipe Summaries
+
+- Date: 2026-11-23
+- Decision: New agent tool `browse_recipes(vegetarian, max_time)` returns every saved recipe (after those optional
+  hard filters) as name, category, total time, vegetarian, tags and ingredient names - no quantities or steps, max
+  150. For requests no filter can express ("light, summery and slightly spicy") the instructions (rule 3a) tell the
+  agent to browse and choose at most 5 itself, with a reason per pick taken from the listed data, and to say so when
+  nothing fits. Clear requests still use `search_recipes` (ADR-009 unchanged).
+- Why: Bonus feature 2 in `PROJECT_CONTEXT.md`, which allows only a small extension - no vector DB or RAG. The agent
+  model already runs for the question, so this costs no extra LLM request (browse + answer = 2 steps of 4); the
+  picks can only be recipes the tool returned. Embeddings would add a dependency and an index to keep in sync for a
+  cookbook of tens of recipes. Above ~150 recipes this would need real retrieval.

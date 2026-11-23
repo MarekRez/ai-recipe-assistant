@@ -25,6 +25,7 @@ Run: `.venv/Scripts/python -m pytest`. No test calls Gemini or Notion.
 | `test_notion.py`           | property mapping, chunking, round trip, errors, schema check, cache   |
 | `test_agent.py`            | tool contracts, no save tool, scripted-model tool chain               |
 | `test_app.py`              | review-before-save flow, duplicate warning, My Recipes (AppTest)      |
+| `test_video.py`            | video upload, processing wait, cleanup, Gemini-only, size/type checks |
 | `test_eval_scoring.py`     | eval metric logic                                                     |
 
 ## Live Extraction Eval (manual)
@@ -56,5 +57,10 @@ Metrics:
 | I want pasta tonight                   | Quick Vegetarian Tomato Pasta                       |
 | dinner ideas                           | all Main course recipes                             |
 | how do I make the salmon?              | full Oven-Baked Lemon Salmon recipe                 |
+
+| something light, summery and slightly spicy | `browse_recipes`, max 5 picks with reasons, says if nothing fits well |
+
+Video (manual, uses Gemini): upload a short recipe video with and without its caption; amounts that are only
+visible in the picture must stay empty; a non-recipe clip must be rejected.
 
 Record pass/fail and the tool calls the agent made (shown in logs) in `AI_LOG.md`.

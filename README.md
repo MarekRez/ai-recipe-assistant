@@ -4,12 +4,12 @@ Minimal semester MVP proving an end-to-end AI agent workflow for recipe knowledg
 
 ## What This Project Demonstrates
 
-1. Add recipe input from plain text or URL.
+1. Add recipe input from plain text, URL or an uploaded video (Gemini reads the video).
 2. Extract normalized structured recipe data with an LLM (Gemini, JSON schema mode).
 3. Let the user review and edit extracted data before saving.
 4. Save confirmed recipes to Notion.
 5. Ask natural-language cookbook questions.
-6. Let an AI agent choose backend tools (`search_recipes`, `get_recipe`, `parse_recipe`). Saving happens only after
+6. Let an AI agent choose backend tools (`search_recipes`, `browse_recipes`, `get_recipe`, `parse_recipe`). Saving happens only after
    user confirmation in the UI (`save_recipe`, see ADR-005).
 
 ## MVP Constraints

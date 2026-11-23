@@ -89,6 +89,18 @@ Chronological log of important AI-related implementation decisions, experiments,
   and the box clears afterwards.
 - Result: verified in the browser: Enter submits, input clears, no model note.
 
+## 2026-11-23 - Bonus Features: Duplicates, Recipe Cache, Video Upload, Vague Search
+
+- Context: MVP complete; implemented bonus features 1-3 from `PROJECT_CONTEXT.md` plus a cache and a saved-recipes
+  table (ADR-014..017).
+- Result (live, read-only on Notion): duplicate check found "Easy Chicken Curry" for "easy chicken curry!" and nothing
+  for "Pizza Margherita". Recipe list: ~0.7 s per Notion load, ~0 s on a warm cache.
+- Result (live, vague search): "something light, summery and slightly spicy" -> Gemini returned 503, Claude fallback
+  answered. One tool call, `browse_recipes()` with no filters; 5 picks, all real recipes, each with a reason from
+  its ingredients (Baked Feta Pasta first: red pepper flakes + tomato/lemon/basil). It said that no recipe is clearly
+  both light and spicy, and pointed to the curry as spicy but heavier. Pass.
+- Video: covered by offline tests (fake Gemini client); a live check with a real Reel is still open (HANDOFF).
+
 ## Log Entry Template
 
 ```

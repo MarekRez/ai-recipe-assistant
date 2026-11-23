@@ -19,14 +19,18 @@ All arguments and return values are JSON-compatible. Tools never raise to the ag
 `{"error": "<user-facing message>"}`.
 
 1. `search_recipes(text_query: str | None, vegetarian: bool | None, max_time: int | None, category: str | None, tags: list[str] | None, ingredient: str | None) -> {"count": int, "results": list[RecipeSummary]}`
-2. `get_recipe(name_or_id: str) -> {"found": true, "recipe": RecipeRecord} | {"found": false}`
-3. `parse_recipe(text_or_url: str) -> {"status": str, "draft": Recipe}` - extracts a draft and stages it for user review. Does **not** save.
+2. `browse_recipes(vegetarian: bool | None, max_time: int | None) -> {"count": int, "truncated": bool, "recipes": list[BrowseEntry]}` -
+   compact list of all saved recipes for vague requests; the agent picks matches itself (ADR-017).
+3. `get_recipe(name_or_id: str) -> {"found": true, "recipe": RecipeRecord} | {"found": false}`
+4. `parse_recipe(text_or_url: str) -> {"status": str, "draft": Recipe}` - extracts a draft and stages it for user review. Does **not** save.
 
 `RecipeSummary` and `RecipeRecord` are defined in `DATA_CONTRACTS.md`.
 
 ## UI-only Functions (not exposed to the agent)
 
 - `parse_recipe_draft(text_or_url: str) -> dict` - used by the "Process Recipe" button.
+- `parse_recipe_video_draft(data: bytes, mime_type: str, caption: str = "") -> dict` - "Process Recipe" with an uploaded
+  video; Gemini only (ADR-016).
 - `list_saved_recipes(refresh: bool = False) -> list[RecipeSummary]` - all saved recipes sorted by name, for the
   "My Recipes" table; `refresh=True` skips the 60 s recipe cache (ADR-015). Raises `ServiceError`.
 - `find_duplicate_recipes(draft: dict) -> list[DuplicateMatch]` - saved recipes with the same name or source URL
@@ -37,7 +41,7 @@ All arguments and return values are JSON-compatible. Tools never raise to the ag
 ## Orchestration Rules
 
 1. Do not invent tool outputs; all recipe data comes from tools.
-2. Prefer explicit filters for search.
+2. Prefer explicit filters for search; use `browse_recipes` only for requests no filter can express.
 3. If a search returns nothing, retry once with fewer filters and say which filter was relaxed.
 4. If a recipe is not found, return a concise not-found response.
 5. The agent cannot save recipes; it tells the user to review the staged draft and press "Save to Notion".
@@ -49,7 +53,8 @@ All arguments and return values are JSON-compatible. Tools never raise to the ag
 3. "I want pasta tonight." -> `search_recipes(text_query="pasta")`
 4. "Something for dinner." -> `search_recipes(category="Main course")`
 5. "How do I make the curry?" -> `get_recipe(name_or_id="curry")`
-6. "Save this recipe: ..." -> `parse_recipe(...)` -> draft appears in the review form -> user presses "Save to Notion".
+6. "Something light, summery and slightly spicy." -> `browse_recipes()` -> the agent picks and explains.
+7. "Save this recipe: ..." -> `parse_recipe(...)` -> draft appears in the review form -> user presses "Save to Notion".
 
 ## Prompt Baseline
 
