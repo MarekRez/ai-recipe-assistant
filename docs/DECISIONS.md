@@ -136,13 +136,17 @@
   extracts one recipe in one request with the text rules plus media rules (amounts only when said or written, never
   read off the picture; several photos are one recipe, in order), then deletes the uploads. A caption that is just
   a link (e.g. the Reel URL) becomes `source_url` and is not sent to the model. Same review form and duplicate check.
-  Gemini-only: Claude cannot read video; for photos a Claude fallback would be possible later (it does not take
-  HEIC and limits image size, so it would need resizing). On a Gemini outage the user is told to paste text instead.
+  Gemini first. On a Gemini outage (incl. the daily free-tier limit) JPG/PNG/WEBP photos go to Claude if
+  `ANTHROPIC_API_KEY` is set (ADR-012): re-encoded as JPEG, long edge max 1568 px, EXIF rotation applied (Pillow),
+  same media prompt. Video (Claude cannot read it) and HEIC (Pillow cannot open it without a plugin) have no
+  fallback - the user is told to upload JPG/PNG or paste the text.
   Not an agent tool - the chat cannot take files. No Instagram downloading: a pasted Reel URL goes through the normal
   URL path, which Instagram blocks with a login page (non-goal in `PROJECT_CONTEXT.md`).
 - Why: Bonus feature 1 in `PROJECT_CONTEXT.md`; photos (cookbook pages, handwritten cards, caption screenshots)
   reuse the same path. Gemini reads both natively, so no new dependency, OCR or transcription step. The Files API
   works for any Reel or phone-photo size, unlike inline bytes (~20 MB per request).
+- Also: a 429 for the *daily* free-tier quota now says "try again tomorrow" instead of "wait a minute"
+  (`gemini_service.is_daily_limit`), for extraction and for the agent without Claude.
 - Also: `source_url` is now always set from the input (or `None`) for text extraction too - before, a URL invented
   by the model could survive when the input was plain text (CLAUDE.md invariant).
 

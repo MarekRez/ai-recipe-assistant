@@ -101,7 +101,11 @@ Chronological log of important AI-related implementation decisions, experiments,
   both light and spicy, and pointed to the curry as spicy but heavier. Pass.
 - Video / photos: covered by offline tests (fake Gemini client). Live photo test (generated recipe card): upload
   went through, but the request hit the Gemini free-tier daily limit (429, 20/day) - the app showed the
-  "Gemini only - paste the text instead" message. A live check is still open (HANDOFF).
+  "Gemini only - paste the text instead" message.
+- Added the Claude photo fallback and a clear daily-limit message. Live, with Gemini's daily quota still used up:
+  the same recipe card -> Claude Haiku (provider "claude"). All 5 ingredients and 4 steps correct; "chili flakes to
+  taste" -> quantity null; prep 10 / cook 8 read, total stayed null (not computed); source_url from the input.
+  Pass. A live Gemini check of video and photos is still open (HANDOFF).
 
 ## Log Entry Template
 

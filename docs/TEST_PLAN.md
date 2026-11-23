@@ -25,7 +25,8 @@ Run: `.venv/Scripts/python -m pytest`. No test calls Gemini or Notion.
 | `test_notion.py`           | property mapping, chunking, round trip, errors, schema check, cache   |
 | `test_agent.py`            | tool contracts, no save tool, scripted-model tool chain               |
 | `test_app.py`              | review-before-save flow, duplicate warning, My Recipes (AppTest)      |
-| `test_media.py`            | video/photo upload, processing wait, cleanup, Gemini-only, checks     |
+| `test_media.py`            | video/photo upload, processing wait, cleanup, input checks            |
+| `test_fallback.py`         | Claude fallback (text, agent, photos), daily-limit messages           |
 | `test_eval_scoring.py`     | eval metric logic                                                     |
 
 ## Live Extraction Eval (manual)
