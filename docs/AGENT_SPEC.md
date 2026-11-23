@@ -27,6 +27,8 @@ All arguments and return values are JSON-compatible. Tools never raise to the ag
 ## UI-only Functions (not exposed to the agent)
 
 - `parse_recipe_draft(text_or_url: str) -> dict` - used by the "Process Recipe" button.
+- `list_saved_recipes(refresh: bool = False) -> list[RecipeSummary]` - all saved recipes sorted by name, for the
+  "My Recipes" table; `refresh=True` skips the 60 s recipe cache (ADR-015). Raises `ServiceError`.
 - `find_duplicate_recipes(draft: dict) -> list[DuplicateMatch]` - saved recipes with the same name or source URL
   as the draft; the review form shows them as a warning (ADR-014). Raises `ServiceError`; the UI then shows no warning.
 - `save_recipe(recipe: dict) -> {"id": str, "url": str}` - validates with `Recipe` and saves to Notion. Called only by

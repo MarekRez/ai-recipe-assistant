@@ -113,3 +113,16 @@
   with ADR-009. Fuzzy name matching ("Chicken Curry" vs. "Easy Chicken Curry") was left out: it would warn about
   genuinely different recipes, and a warning that is often wrong gets ignored. Not an agent tool: the agent has no
   save step to guard, and the review form shows the warning for agent drafts as well.
+
+## ADR-015: Recipe List Cache and "My Recipes" View
+
+- Date: 2026-11-23
+- Decision: `notion_service.list_all_recipes()` keeps the loaded recipes for 60 s (`CACHE_TTL_SECONDS`), shared by
+  all sessions of the app process. `save_recipe_to_notion` clears it, so a saved recipe is visible right away;
+  changes made directly in Notion show up after at most 60 s, or at once via "Refresh" in My Recipes. Failed reads
+  are not cached; callers get copies. A "My Recipes" section (behind a toggle, so Notion is read only when opened)
+  shows all saved recipes as a table through the UI function `list_saved_recipes` - no LLM request.
+- Why: Search, name lookup and the duplicate check (ADR-014) each load the whole data source (ADR-009), and one agent
+  answer often makes 2-3 of these calls (~0.7 s each, measured live). Seeing what is saved should not cost one of the
+  ~20 free Gemini requests per day. Still deterministic, no new dependency; a module-level dict instead of
+  `st.cache_data` keeps Streamlit out of `services/`.

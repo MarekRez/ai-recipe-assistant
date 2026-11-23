@@ -16,6 +16,7 @@ from smolagents import Tool, tool
 from models.recipe import Recipe, SearchFilters
 from services.errors import ServiceError
 from services.notion_service import (
+    clear_recipe_cache,
     find_duplicate_recipes_in_notion,
     get_recipe_from_notion,
     save_recipe_to_notion,
@@ -36,6 +37,16 @@ def parse_recipe_draft(text_or_url: str) -> dict:
 def save_recipe(recipe: dict) -> dict:
     """Validate and save a user-confirmed recipe. UI-only, never exposed to the agent. Raises ServiceError."""
     return save_recipe_to_notion(Recipe.model_validate(recipe))
+
+
+def list_saved_recipes(refresh: bool = False) -> list[dict]:
+    """All saved recipes as RecipeSummary, sorted by name, for the "My recipes" view. UI-only, no LLM request.
+
+    `refresh=True` skips the recipe cache (e.g. after editing recipes directly in Notion). Raises ServiceError.
+    """
+    if refresh:
+        clear_recipe_cache()
+    return sorted(search_recipes_in_notion(SearchFilters()), key=lambda r: (r["name"] or "").casefold())
 
 
 def find_duplicate_recipes(draft: dict) -> list[dict]:

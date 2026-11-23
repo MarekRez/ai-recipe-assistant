@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from pydantic import ValidationError
 
 from agent.recipe_agent import ask_agent
-from agent.tools import find_duplicate_recipes, parse_recipe_draft, save_recipe
+from agent.tools import find_duplicate_recipes, list_saved_recipes, parse_recipe_draft, save_recipe
 from services.config import app_password, missing_settings
 from services.errors import ServiceError
 from services.notion_service import check_notion_setup
@@ -94,6 +94,20 @@ def ingredients_from_editor(df: pd.DataFrame) -> list[dict]:
             cleaned["quantity"] = float(cleaned["quantity"])
         rows.append(cleaned)
     return rows
+
+
+def recipes_table(recipes: list[dict]) -> pd.DataFrame:
+    veg = {True: "Yes", False: "No", None: "Unknown"}
+    return pd.DataFrame(
+        {
+            "Name": [r["name"] for r in recipes],
+            "Category": [r.get("category") or "" for r in recipes],
+            "Total time (min)": pd.array([r.get("total_time_minutes") for r in recipes], dtype="Int64"),
+            "Vegetarian": [veg[r.get("vegetarian")] for r in recipes],
+            "Tags": [", ".join(r.get("tags") or []) for r in recipes],
+            "Notion": [r.get("url") for r in recipes],
+        }
+    )
 
 
 def format_validation_error(exc: ValidationError) -> str:
@@ -225,6 +239,29 @@ if draft:
             state.input_version += 1
             state.flash = f"Saved **{confirmed['name']}** to Notion: {result.get('url') or result['id']}"
             st.rerun()
+
+st.divider()
+
+# --- My recipes: the saved list without an AI request (ADR-015) -------------------
+
+st.subheader("My Recipes")
+if st.toggle("Show saved recipes", disabled=bool(missing)):
+    refresh = st.button("Refresh", help="Reload from Notion, e.g. after editing recipes there.")
+    try:
+        recipes = list_saved_recipes(refresh=refresh)
+    except ServiceError as exc:
+        st.error(exc.user_message)
+    else:
+        if not recipes:
+            st.info("No recipes saved yet. Add one above.")
+        else:
+            st.caption(f"{len(recipes)} recipes. Total time counts prep + cook when no total is stated.")
+            st.dataframe(
+                recipes_table(recipes),
+                hide_index=True,
+                width="stretch",
+                column_config={"Notion": st.column_config.LinkColumn("Notion", display_text="Open")},
+            )
 
 st.divider()
 

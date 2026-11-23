@@ -21,7 +21,7 @@ Source of truth, in order: `PROJECT_CONTEXT.md` > `docs/*` > code. If they disag
 
 - `models/recipe.py` - the only schema definition. Everything validates through it.
 - `services/*` - plain Python integrations (Gemini, Notion, URL fetch, parsing, search). No Streamlit or smolagents imports. Failures raise `ServiceError(user_message, detail)`.
-- `agent/tools.py` - smolagents tools (`search_recipes`, `get_recipe`, `parse_recipe`) + UI functions (`parse_recipe_draft`, `find_duplicate_recipes`, `save_recipe`). JSON-compatible args/returns; tools return `{"error": ...}` instead of raising.
+- `agent/tools.py` - smolagents tools (`search_recipes`, `get_recipe`, `parse_recipe`) + UI functions (`parse_recipe_draft`, `find_duplicate_recipes`, `list_saved_recipes`, `save_recipe`). JSON-compatible args/returns; tools return `{"error": ...}` instead of raising.
 - `agent/recipe_agent.py` - builds the agent (model + tools + instructions), `ask_agent()`.
 - `app.py` - UI only. Drafts in `st.session_state` (every click reruns the script).
 - `evals/` - live eval script + pure scoring functions.
@@ -30,7 +30,8 @@ Source of truth, in order: `PROJECT_CONTEXT.md` > `docs/*` > code. If they disag
 
 - The agent never gets a save tool. Saving happens only via the UI "Save to Notion" button after review (ADR-005).
 - Missing data stays `None`. Never ask the LLM to "estimate"; `source_url` comes from the input, not the LLM.
-- Search is deterministic: load all pages, filter with `services/recipe_search.filter_recipes` (ADR-009).
+- Search is deterministic: load all pages, filter with `services/recipe_search.filter_recipes` (ADR-009). The loaded
+  list is cached 60 s (ADR-015): anything that writes to Notion must call `clear_recipe_cache()`; tests clear it in `conftest.py`.
 - Notion property names/types are defined once in `notion_service.PROPERTY_SCHEMA`; keep `docs/NOTION_SETUP.md` in sync.
 - Tests never call live Gemini, Claude or Notion (`conftest.py` blanks `ANTHROPIC_API_KEY`).
 - Claude is a fallback only (ADR-012): switch on `ProviderUnavailableError` and only if `ANTHROPIC_API_KEY` is set; one model per agent answer; the eval never switches (`--provider`).

@@ -22,9 +22,9 @@ Run: `.venv/Scripts/python -m pytest`. No test calls Gemini or Notion.
 | `test_models.py`           | schema rules, nulls, effective total time                             |
 | `test_extraction.py`       | fixtures are schema-valid, parser validation, URL detection, JSON-LD  |
 | `test_search.py`           | deterministic filters for the example intents, duplicate matching     |
-| `test_notion.py`           | property mapping, chunking, round trip, error messages, schema check  |
+| `test_notion.py`           | property mapping, chunking, round trip, errors, schema check, cache   |
 | `test_agent.py`            | tool contracts, no save tool, scripted-model tool chain               |
-| `test_app.py`              | Streamlit review-before-save flow, duplicate warning (AppTest)        |
+| `test_app.py`              | review-before-save flow, duplicate warning, My Recipes (AppTest)      |
 | `test_eval_scoring.py`     | eval metric logic                                                     |
 
 ## Live Extraction Eval (manual)

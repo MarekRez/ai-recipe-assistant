@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pandas as pd
+
 import pytest
 from streamlit.testing.v1 import AppTest
 
@@ -169,3 +171,55 @@ def test_failed_duplicate_check_does_not_block_the_review(monkeypatch, saved):
     next(b for b in at.button if b.label == "Save to Notion").click()
     at.run()
     assert len(saved) == 1
+
+
+# --- My recipes (ADR-015) ------------------------------------------------------------------------
+
+
+def show_recipes(at: AppTest) -> AppTest:
+    next(t for t in at.toggle if t.label == "Show saved recipes").set_value(True)
+    return at.run()
+
+
+def test_my_recipes_is_not_loaded_until_opened(monkeypatch):
+    calls = []
+    monkeypatch.setattr(tools, "list_saved_recipes", lambda refresh=False: calls.append(refresh) or [])
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    assert not at.exception and calls == []  # no Notion read on every page load
+    at = show_recipes(at)
+    assert calls == [False]
+    assert any("No recipes saved yet" in i.value for i in at.info)
+
+
+def test_my_recipes_lists_saved_recipes_without_the_agent(monkeypatch, sample_records):
+    from services.recipe_search import summarize
+
+    monkeypatch.setattr(tools, "list_saved_recipes", lambda refresh=False: [summarize(r) for r in sample_records])
+    monkeypatch.setattr(recipe_agent, "ask_agent", lambda *a, **k: pytest.fail("the list must not use the agent"))
+    at = show_recipes(AppTest.from_file(APP, default_timeout=30).run())
+    assert not at.exception
+    table = at.dataframe[0].value
+    assert len(table) == len(sample_records)
+    curry = table[table["Name"] == "Easy Chicken Curry"].iloc[0]
+    assert curry["Total time (min)"] == 45 and curry["Vegetarian"] == "No"  # 15 prep + 30 cook
+    assert curry["Notion"].startswith("https://notion.so/")
+    salad = table[table["Name"] == "Greek Salad"].iloc[0]
+    assert pd.isna(salad["Total time (min)"])  # unknown stays empty, never 0
+
+
+def test_my_recipes_refresh_and_errors(monkeypatch):
+    calls = []
+
+    def fake_list(refresh=False):
+        calls.append(refresh)
+        if len(calls) > 1:
+            raise ServiceError("Notion is not reachable right now. Try again later.")
+        return []
+
+    monkeypatch.setattr(tools, "list_saved_recipes", fake_list)
+    at = show_recipes(AppTest.from_file(APP, default_timeout=30).run())
+    next(b for b in at.button if b.label == "Refresh").click()
+    at.run()
+    assert not at.exception
+    assert calls == [False, True]
+    assert any("not reachable" in e.value for e in at.error)

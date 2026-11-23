@@ -136,3 +136,16 @@ def test_task_includes_recent_conversation_only():
 def test_long_answers_are_cut_in_the_history():
     task = recipe_agent.build_task("next", [{"question": "q", "answer": "x" * 5000, "provider": "claude"}])
     assert len(task) < 2000 and "[...]" in task
+
+
+def test_list_saved_recipes_is_sorted_and_refresh_clears_the_cache(monkeypatch, sample_records):
+    from services.recipe_search import filter_recipes
+
+    cleared = []
+    monkeypatch.setattr(tools, "search_recipes_in_notion", lambda f: filter_recipes(list(reversed(sample_records)), f))
+    monkeypatch.setattr(tools, "clear_recipe_cache", lambda: cleared.append(True))
+    names = [r["name"] for r in tools.list_saved_recipes()]
+    assert names == sorted(names, key=str.casefold) and len(names) == len(sample_records)
+    assert cleared == []
+    tools.list_saved_recipes(refresh=True)
+    assert cleared == [True]
