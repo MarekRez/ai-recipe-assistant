@@ -20,6 +20,7 @@ from services.notion_service import (
     clear_recipe_cache,
     find_duplicate_recipes_in_notion,
     get_recipe_from_notion,
+    list_all_recipes,
     save_recipe_to_notion,
     search_recipes_in_notion,
 )
@@ -54,6 +55,18 @@ def list_saved_recipes(refresh: bool = False) -> list[dict]:
     if refresh:
         clear_recipe_cache()
     return sorted(search_recipes_in_notion(SearchFilters()), key=lambda r: (r["name"] or "").casefold())
+
+
+def get_saved_recipe(recipe_id: str) -> dict | None:
+    """One complete saved recipe (ingredients, instructions) by Notion page id, for the "View recipe" dialog.
+
+    UI-only, not an agent tool. Reads the cached recipe list (ADR-015) instead of an extra Notion request;
+    ids match with or without dashes, case-insensitive. None if not found. Raises ServiceError.
+    """
+    key = (recipe_id or "").replace("-", "").strip().lower()
+    if not key:
+        return None
+    return next((r for r in list_all_recipes() if (r.get("id") or "").replace("-", "").lower() == key), None)
 
 
 def find_duplicate_recipes(draft: dict) -> list[dict]:
