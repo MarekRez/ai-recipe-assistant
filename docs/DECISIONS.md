@@ -122,6 +122,8 @@
   changes made directly in Notion show up after at most 60 s, or at once via "Refresh" in My Recipes. Failed reads
   are not cached; callers get copies. A "My Recipes" section (behind a toggle, so Notion is read only when opened)
   shows all saved recipes as a table through the UI function `list_saved_recipes` - no LLM request.
+  Update 2026-11-24: "View recipe" (select a row, click the button) opens one recipe read-only in a dialog. The UI
+  function `get_saved_recipe` takes the full record from the same cache - no per-recipe `pages.retrieve` request.
 - Why: Search, name lookup and the duplicate check (ADR-014) each load the whole data source (ADR-009), and one agent
   answer often makes 2-3 of these calls (~0.7 s each, measured live). Seeing what is saved should not cost one of the
   ~20 free Gemini requests per day. Still deterministic, no new dependency; a module-level dict instead of

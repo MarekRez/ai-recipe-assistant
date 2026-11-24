@@ -41,6 +41,7 @@ Notion API (`notion-client` 3.x), Pydantic.
 |   |-- url_fetcher.py          URL -> recipe text (JSON-LD first)
 |   |-- notion_service.py       Notion mapping and CRUD
 |   |-- recipe_search.py        deterministic filtering
+|   |-- recipe_view.py          display helpers for the View recipe dialog
 |   |-- config.py / errors.py
 |-- models/recipe.py            Pydantic schema
 |-- evals/                      live extraction eval

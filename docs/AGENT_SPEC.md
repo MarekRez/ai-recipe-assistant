@@ -33,6 +33,9 @@ All arguments and return values are JSON-compatible. Tools never raise to the ag
   uploaded video or up to 5 photos, as `(data, mime_type)` pairs; Gemini, photos fall back to Claude (ADR-016).
 - `list_saved_recipes(refresh: bool = False) -> list[RecipeSummary]` - all saved recipes sorted by name, for the
   "My Recipes" table; `refresh=True` skips the 60 s recipe cache (ADR-015). Raises `ServiceError`.
+- `get_saved_recipe(recipe_id: str) -> RecipeRecord | None` - one complete saved recipe for the "View recipe" dialog,
+  looked up by Notion page id (with or without dashes, case-insensitive) in the cached recipe list (ADR-015), so no
+  extra Notion request. `None` if not found. Raises `ServiceError`. Not an agent tool (the agent uses `get_recipe`).
 - `find_duplicate_recipes(draft: dict) -> list[DuplicateMatch]` - saved recipes with the same name or source URL
   as the draft; the review form shows them as a warning (ADR-014). Raises `ServiceError`; the UI then shows no warning.
 - `save_recipe(recipe: dict) -> {"id": str, "url": str}` - validates with `Recipe` and saves to Notion. Called only by

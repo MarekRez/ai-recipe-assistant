@@ -12,6 +12,8 @@ Build a small AI Recipe Knowledge Assistant MVP that demonstrates AI orchestrati
 4. User confirms save to Notion.
 5. User asks natural-language cookbook query.
 6. Agent chooses tools and returns relevant recipes.
+7. User browses saved recipes in "My Recipes" (table, no AI request) and opens one with "View recipe" to read it in
+   the app; the "Open" link still goes to the Notion page.
 
 ## Functional Requirements
 
@@ -21,6 +23,9 @@ Build a small AI Recipe Knowledge Assistant MVP that demonstrates AI orchestrati
 4. User confirmation is mandatory before save.
 5. Notion storage must persist recipe fields.
 6. Agent can search and fetch saved recipes through tools.
+7. "View recipe" (select a row in My Recipes, then the button) shows one saved recipe read-only in a dialog:
+   overview (category, prep/cook/total time, vegetarian, tags), ingredients, numbered steps, source link and an
+   "Open in Notion" button. Missing values read "not stated"; nothing is estimated and nothing is written.
 
 ## Non-Functional Requirements
 
