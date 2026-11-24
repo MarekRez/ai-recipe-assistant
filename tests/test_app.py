@@ -252,6 +252,17 @@ def select_row(at: AppTest, row: int) -> AppTest:
     return at.run()
 
 
+def dialog_titles(at: AppTest) -> list[str]:
+    # AppTest has no public dialog accessor; walk the element tree.
+    def walk(node):
+        for child in getattr(node, "children", {}).values():
+            yield child
+            yield from walk(child)
+
+    protos = [getattr(b, "proto", None) for b in walk(at._tree)]
+    return [p.dialog.title for p in protos if p is not None and p.DESCRIPTOR.name == "Block" and p.HasField("dialog")]
+
+
 def test_view_recipe_needs_a_selected_row(listed):
     at = show_recipes(AppTest.from_file(APP, default_timeout=30).run())
     assert not at.exception
@@ -268,9 +279,10 @@ def test_view_recipe_shows_the_full_recipe_in_the_app(listed, sample_records):
     assert not at.exception
     record = sample_records[1]
     assert listed == [record["id"]]
-    assert record["name"] in [s.value for s in at.subheader]
+    assert dialog_titles(at) == [f"🍲 {record['name']}"]
     text = "\n".join(m.value for m in at.markdown)
-    assert "- **Prep time:** not stated" in text  # missing stays missing
+    assert ":gray[*not stated*]" in text and "**25 min**" in text  # prep/cook missing stay missing, total stated
+    assert ":green-badge[pasta]" in text
     assert f"1. {record['instructions'][0]}" in text
     assert all(f"- {ingredient_line(i)}" in text for i in record["ingredients"])
 
@@ -282,6 +294,7 @@ def test_view_recipe_reports_missing_recipe_and_notion_errors(monkeypatch, liste
     at.run()
     assert not at.exception
     assert any("no longer in Notion" in w.value for w in at.warning)
+    assert dialog_titles(at) == []  # no empty dialog, the message is on the page
 
     def fail(recipe_id):
         raise ServiceError("Notion is not reachable right now. Try again later.")

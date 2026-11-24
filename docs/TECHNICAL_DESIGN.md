@@ -43,7 +43,8 @@ Layering rule: `services/*` import neither Streamlit nor smolagents.
    The session's last 3 question/answer pairs are passed along (`st.session_state.history`) for follow-ups.
 5. My Recipes: `list_saved_recipes` fills the table (`st.dataframe`, single-row selection). "View recipe" calls
    `get_saved_recipe(id)`, which takes the full record from the cached list (ADR-015, no extra Notion request), and
-   `@st.dialog` renders it read-only. The dialog opens only on the button, because the selection survives reruns.
+   `st.dialog` (titled with the recipe name) renders it read-only in the review-form layout; a missing recipe or
+   Notion error shows on the page instead. The dialog opens only on the button, because the selection survives reruns.
 
 ## Error Handling Strategy
 

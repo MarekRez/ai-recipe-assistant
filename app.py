@@ -26,7 +26,7 @@ from services.recipe_parser import MAX_IMAGES, MEDIA_TYPES, VIDEO_TYPES
 from services.config import app_password, missing_settings
 from services.errors import ServiceError
 from services.notion_service import check_notion_setup
-from services.recipe_view import ingredient_line, recipe_overview
+from services.recipe_view import NOT_STATED, ingredient_line, recipe_overview
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -119,9 +119,50 @@ def recipes_table(recipes: list[dict]) -> pd.DataFrame:
     )
 
 
-@st.dialog("Recipe", width="large")
+def recipe_fact(column, label: str, value: str) -> None:
+    """One labelled value in the dialog's overview grid; missing values in grey, like an empty field."""
+    column.caption(label)
+    column.markdown(":gray[*not stated*]" if value == NOT_STATED else f"**{value}**")
+
+
+def render_recipe(record: dict) -> None:
+    """Dialog body for View recipe: same layout as the review form (times in 3 columns, then category/vegetarian)."""
+    facts = dict(recipe_overview(record))
+    with st.container(border=True):
+        row1 = st.columns(3)
+        for column, label in zip(row1, ("Prep time", "Cook time", "Total time")):
+            recipe_fact(column, label, facts[label])
+        row2 = st.columns(3)
+        recipe_fact(row2[0], "Category", facts["Category"])
+        recipe_fact(row2[1], "Vegetarian", facts["Vegetarian"])
+        row2[2].caption("Tags")
+        tags = [t.replace("[", "(").replace("]", ")") for t in record.get("tags") or []]
+        row2[2].markdown(" ".join(f":green-badge[{t}]" for t in tags) or ":gray[*not stated*]")
+
+    ingredients_col, steps_col = st.columns([2, 3], gap="large")
+    with ingredients_col:
+        st.markdown("#### Ingredients")
+        lines = [line for line in (ingredient_line(i) for i in record.get("ingredients") or []) if line]
+        st.markdown("\n".join(f"- {line}" for line in lines) or ":gray[*none saved*]")
+    with steps_col:
+        st.markdown("#### Instructions")
+        steps = record.get("instructions") or []
+        st.markdown("\n".join(f"{n}. {step}" for n, step in enumerate(steps, 1)) or ":gray[*none saved*]")
+
+    st.divider()
+    source_col, notion_col = st.columns([3, 1], vertical_alignment="center")
+    if record.get("source_url"):
+        source_col.caption(f"Source: [{record['source_url']}]({record['source_url']})")
+    if record.get("url"):
+        notion_col.link_button("Open in Notion", record["url"], type="primary", icon=":material/open_in_new:", width="stretch")
+
+
 def show_recipe(recipe_id: str) -> None:
-    """Read-only view of one saved recipe (My Recipes -> View recipe). No AI request, no Notion write."""
+    """Read-only view of one saved recipe (My Recipes -> View recipe). No AI request, no Notion write.
+
+    Errors show on the page like the rest of My Recipes; the dialog opens only for a found recipe,
+    with the recipe name as its title.
+    """
     try:
         record = get_saved_recipe(recipe_id)
     except ServiceError as exc:
@@ -130,18 +171,7 @@ def show_recipe(recipe_id: str) -> None:
     if record is None:
         st.warning("This recipe is no longer in Notion. Click Refresh to reload the list.")
         return
-    st.subheader(record["name"])
-    st.markdown("\n".join(f"- **{label}:** {value}" for label, value in recipe_overview(record)))
-    st.markdown("#### Ingredients")
-    lines = [ingredient_line(i) for i in record.get("ingredients") or []]
-    st.markdown("\n".join(f"- {line}" for line in lines if line) or "_None saved._")
-    st.markdown("#### Instructions")
-    steps = record.get("instructions") or []
-    st.markdown("\n".join(f"{n}. {step}" for n, step in enumerate(steps, 1)) or "_None saved._")
-    if record.get("source_url"):
-        st.markdown(f"**Source:** [{record['source_url']}]({record['source_url']})")
-    if record.get("url"):
-        st.link_button("Open in Notion", record["url"])
+    st.dialog(f"🍲 {record['name']}", width="large")(render_recipe)(record)
 
 
 def format_validation_error(exc: ValidationError) -> str:
