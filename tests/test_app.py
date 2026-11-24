@@ -10,6 +10,7 @@ from streamlit.testing.v1 import AppTest
 from agent import recipe_agent, tools
 from models.recipe import Recipe
 from services.errors import ServiceError
+from services.recipe_view import ingredient_line
 from tests.conftest import load_expected
 
 APP = str(Path(__file__).resolve().parent.parent / "app.py")
@@ -222,6 +223,73 @@ def test_my_recipes_refresh_and_errors(monkeypatch):
     at.run()
     assert not at.exception
     assert calls == [False, True]
+    assert any("not reachable" in e.value for e in at.error)
+
+
+# --- View recipe dialog in My Recipes --------------------------------------------------------------
+
+
+@pytest.fixture
+def listed(monkeypatch, sample_records):
+    """My Recipes shows the fixture recipes; the dialog reads the full record by id."""
+    from services.recipe_search import summarize
+
+    opened = []
+    monkeypatch.setattr(tools, "list_saved_recipes", lambda refresh=False: [summarize(r) for r in sample_records])
+    monkeypatch.setattr(
+        tools, "get_saved_recipe", lambda i: opened.append(i) or next((r for r in sample_records if r["id"] == i), None)
+    )
+    monkeypatch.setattr(recipe_agent, "ask_agent", lambda *a, **k: pytest.fail("viewing must not use the agent"))
+    return opened
+
+
+def view_button(at: AppTest):
+    return next(b for b in at.button if b.label == "View recipe")
+
+
+def select_row(at: AppTest, row: int) -> AppTest:
+    at.session_state["my_recipes_table"] = {"selection": {"rows": [row], "columns": [], "cells": []}}
+    return at.run()
+
+
+def test_view_recipe_needs_a_selected_row(listed):
+    at = show_recipes(AppTest.from_file(APP, default_timeout=30).run())
+    assert not at.exception
+    assert view_button(at).disabled
+    assert at.dataframe[0].value["Notion"].iloc[0].startswith("https://notion.so/")  # Open link stays
+
+
+def test_view_recipe_shows_the_full_recipe_in_the_app(listed, sample_records):
+    at = select_row(show_recipes(AppTest.from_file(APP, default_timeout=30).run()), 1)
+    assert not view_button(at).disabled
+    assert listed == []  # selecting alone does not open the dialog
+    view_button(at).click()
+    at.run()
+    assert not at.exception
+    record = sample_records[1]
+    assert listed == [record["id"]]
+    assert record["name"] in [s.value for s in at.subheader]
+    text = "\n".join(m.value for m in at.markdown)
+    assert "- **Prep time:** not stated" in text  # missing stays missing
+    assert f"1. {record['instructions'][0]}" in text
+    assert all(f"- {ingredient_line(i)}" in text for i in record["ingredients"])
+
+
+def test_view_recipe_reports_missing_recipe_and_notion_errors(monkeypatch, listed):
+    at = select_row(show_recipes(AppTest.from_file(APP, default_timeout=30).run()), 0)
+    monkeypatch.setattr(tools, "get_saved_recipe", lambda i: None)
+    view_button(at).click()
+    at.run()
+    assert not at.exception
+    assert any("no longer in Notion" in w.value for w in at.warning)
+
+    def fail(recipe_id):
+        raise ServiceError("Notion is not reachable right now. Try again later.")
+
+    monkeypatch.setattr(tools, "get_saved_recipe", fail)
+    view_button(at).click()
+    at.run()
+    assert not at.exception
     assert any("not reachable" in e.value for e in at.error)
 
 

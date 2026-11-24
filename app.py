@@ -16,6 +16,7 @@ from pydantic import ValidationError
 from agent.recipe_agent import ask_agent
 from agent.tools import (
     find_duplicate_recipes,
+    get_saved_recipe,
     list_saved_recipes,
     parse_recipe_draft,
     parse_recipe_media_draft,
@@ -25,6 +26,7 @@ from services.recipe_parser import MAX_IMAGES, MEDIA_TYPES, VIDEO_TYPES
 from services.config import app_password, missing_settings
 from services.errors import ServiceError
 from services.notion_service import check_notion_setup
+from services.recipe_view import ingredient_line, recipe_overview
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -115,6 +117,31 @@ def recipes_table(recipes: list[dict]) -> pd.DataFrame:
             "Notion": [r.get("url") for r in recipes],
         }
     )
+
+
+@st.dialog("Recipe", width="large")
+def show_recipe(recipe_id: str) -> None:
+    """Read-only view of one saved recipe (My Recipes -> View recipe). No AI request, no Notion write."""
+    try:
+        record = get_saved_recipe(recipe_id)
+    except ServiceError as exc:
+        st.error(exc.user_message)
+        return
+    if record is None:
+        st.warning("This recipe is no longer in Notion. Click Refresh to reload the list.")
+        return
+    st.subheader(record["name"])
+    st.markdown("\n".join(f"- **{label}:** {value}" for label, value in recipe_overview(record)))
+    st.markdown("#### Ingredients")
+    lines = [ingredient_line(i) for i in record.get("ingredients") or []]
+    st.markdown("\n".join(f"- {line}" for line in lines if line) or "_None saved._")
+    st.markdown("#### Instructions")
+    steps = record.get("instructions") or []
+    st.markdown("\n".join(f"{n}. {step}" for n, step in enumerate(steps, 1)) or "_None saved._")
+    if record.get("source_url"):
+        st.markdown(f"**Source:** [{record['source_url']}]({record['source_url']})")
+    if record.get("url"):
+        st.link_button("Open in Notion", record["url"])
 
 
 def format_validation_error(exc: ValidationError) -> str:
@@ -283,13 +310,24 @@ if st.toggle("Show saved recipes", disabled=bool(missing)):
         if not recipes:
             st.info("No recipes saved yet. Add one above.")
         else:
-            st.caption(f"{len(recipes)} recipes. Total time counts prep + cook when no total is stated.")
-            st.dataframe(
+            st.caption(
+                f"{len(recipes)} recipes. Total time counts prep + cook when no total is stated. "
+                "Select a row and click View recipe to read it here."
+            )
+            table = st.dataframe(
                 recipes_table(recipes),
                 hide_index=True,
                 width="stretch",
                 column_config={"Notion": st.column_config.LinkColumn("Notion", display_text="Open")},
+                on_select="rerun",
+                selection_mode="single-row",
+                key="my_recipes_table",
             )
+            # The dialog opens only on the button: the row stays selected across reruns (e.g. an agent question),
+            # so opening on selection would pop it up again and again.
+            rows = [i for i in table.selection.rows if i < len(recipes)]  # the list can shrink after Refresh
+            if st.button("View recipe", disabled=not rows):
+                show_recipe(recipes[rows[0]]["id"])
 
 st.divider()
 
