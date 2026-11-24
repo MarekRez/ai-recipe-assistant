@@ -107,6 +107,18 @@ Chronological log of important AI-related implementation decisions, experiments,
   taste" -> quantity null; prep 10 / cook 8 read, total stayed null (not computed); source_url from the input.
   Pass. A live Gemini check of video and photos is still open (HANDOFF).
 
+## 2026-11-24 - View recipe dialog in My Recipes
+
+- Context: "Open" in My Recipes always left the app for Notion; users wanted to read a saved recipe in the app.
+- Change: row selection + "View recipe" button -> `st.dialog` with overview, ingredients, steps, source and
+  "Open in Notion". UI function `get_saved_recipe` reads the full record from the ADR-015 cache;
+  `services/recipe_view.py` formats it (missing values -> "not stated", `raw` line first, prep + cook marked).
+- Why: no AI request and no extra Notion request per recipe; the dialog opens only on the button because the row
+  selection survives reruns (opening on selection would pop it up again after every agent question).
+- Result: 179 offline tests green (24 new). Live read-only check: 17 recipes listed, "Baked Feta Pasta" loaded
+  completely (11 ingredients, 5 steps). Not yet looked at in a browser.
+- Next: browser check + reboot of the deployed app (HANDOFF Next Up 3).
+
 ## Log Entry Template
 
 ```

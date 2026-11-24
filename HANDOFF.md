@@ -8,12 +8,14 @@ This file is **overwritten**, not appended - history lives in git log and `AI_LO
 - MVP is complete and verified against **live** Gemini, Claude and Notion (2026-11-22): text/URL extraction, review
   form, save to Notion, cookbook agent with short conversation memory (follow-ups like "yes" work), Enter submits
   a question; Add Recipe submits with Ctrl+Enter and clears its input after a successful save.
-- Offline test suite: 155 tests, all passing. Evaluation done (Step 6-8, results in `AI_LOG.md`).
+- Offline test suite: 179 tests, all passing. Evaluation done (Step 6-8, results in `AI_LOG.md`).
 - Optional Claude fallback (ADR-012, `claude-haiku-5-5`) when Gemini hits its limit; optional password screen
   (`APP_PASSWORD`, ADR-013) for the deployed app.
 - Duplicate warning in the review form (ADR-014): same name or same source URL as a saved recipe -> warning with
   a link; saving is still allowed.
-- "My Recipes" table (toggle, no AI request) and a 60 s recipe-list cache cleared on save (ADR-015).
+- "My Recipes" table (toggle, no AI request) and a 60 s recipe-list cache cleared on save (ADR-015). "View recipe"
+  (select a row, click the button) shows the saved recipe read-only in a dialog styled like the review form, with
+  an "Open in Notion" button; the "Open" link column stays. Reads the cache, no AI, no extra Notion request.
 - Video or photo upload in Add Recipe (ADR-016) - photos fall back to Claude when Gemini is out, video does not; vague requests ("light, summery, slightly spicy") via the
   `browse_recipes` agent tool - the model picks from compact summaries (ADR-017).
 - Notion: shared database "Recipes" on the page "Recipe Assistant (app data)", 10 fixture recipes as demo data.
@@ -27,8 +29,13 @@ This file is **overwritten**, not appended - history lives in git log and `AI_LO
    tested live and works): a short recipe Reel (MP4) with and without the caption, and 1-2 photos of a cookbook
    page; amounts only visible in the picture must stay empty. Merged to `main` on 2026-11-23 - **reboot the
    deployed app** after this push (new imports, see Gotchas); Streamlit Cloud installs the `pillow` pin itself.
-3. [ ] Optional: re-run the Gemini eval cases `--only 03,06,07,11` (quota ran out) for a full Gemini vs. Claude comparison.
-4. [ ] Optional: decide whether the 10 fixture recipes stay as demo data in Notion.
+3. [ ] **Reboot the deployed app** after the 2026-11-24 push (new module `services/recipe_view.py`, see Gotchas),
+   then click through View recipe online. Locally it was checked with AppTest and live Notion data (17 recipes),
+   but nobody has looked at the dialog in a browser yet - do that once, with a recipe that has missing times.
+4. [ ] Optional: re-run the Gemini eval cases `--only 03,06,07,11` (quota ran out) for a full Gemini vs. Claude comparison.
+5. [ ] Optional: decide whether the 10 fixture recipes stay as demo data in Notion.
+
+6. [ ] Small doc fix: `docs/ROADMAP.md` Phase 2 still says "needs live verification" (done 2026-11-22).
 
 Done earlier: items 1-8 of the original list (merge, decisions, Notion setup, model id, live smoke test, eval answer
 key review, extraction eval, agent scenarios) - see `AI_LOG.md` and git log.
@@ -66,9 +73,8 @@ Nothing.
 
 ## Last Session
 
-- 2026-11-23, MLabska + Claude Code (branch `feat/video-and-vague-search`): bonus features 1 and 2 from
-  `PROJECT_CONTEXT.md`. Video or up to 5 photos via the Gemini Files API (upload -> wait -> extract -> delete; a
-  link in the caption field becomes `source_url`). A pasted Reel URL does not work (Instagram login page) - by design. Agent tool `browse_recipes` + instruction 3a for vague requests; live check
-  passed (see `AI_LOG.md`). Also: `source_url` can no longer come from the model for text input. 155 tests green. Photo fallback to Claude + clear "daily limit" message, both tested live.
-  Earlier the same day (merged): duplicate warning (ADR-014), recipe cache + My Recipes (ADR-015).
-- Merged into `main`. Left unfinished: live Gemini video/photo test and the reboot of the deployed app (Next Up 2).
+- 2026-11-24, m-miskevych + Claude Code (branch `feat/recipe-detail-view`, macOS): first local setup on a Mac
+  (`python3.12 -m venv`, `.venv/bin/python`; commands promoted to `CLAUDE.md`). New "View recipe" dialog in My
+  Recipes: UI function `get_saved_recipe` (cached lookup by page id, not an agent tool), pure display helpers in
+  `services/recipe_view.py`, dialog in `app.py`, tests in `test_recipe_view.py` / `test_app.py`, docs + ADR-015 note.
+  179 tests green. Merged into `main`. Left open: browser check and reboot of the deployed app (Next Up 3).

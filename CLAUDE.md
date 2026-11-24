@@ -8,7 +8,7 @@ Semester MVP: Streamlit app + smolagents agent that extracts recipes (Gemini), l
 
 Source of truth, in order: `PROJECT_CONTEXT.md` > `docs/*` > code. If they disagree, fix the docs in the same change (see AGENTS.md tooling rule 3). Decisions live in `docs/DECISIONS.md` (ADR-005..011 cover the non-obvious ones).
 
-## Commands (Windows, Python 3.12 venv in `.venv`)
+## Commands (Python 3.12 venv in `.venv`; Windows `.venv/Scripts/python`, macOS/Linux `.venv/bin/python`)
 
 ```bash
 .venv/Scripts/python -m pip install -r requirements.txt
@@ -16,6 +16,8 @@ Source of truth, in order: `PROJECT_CONTEXT.md` > `docs/*` > code. If they disag
 .venv/Scripts/python -m pytest                       # offline; Gemini and Notion are mocked
 .venv/Scripts/python -m evals.run_extraction_eval    # LIVE Gemini - spends free-tier quota, run only when asked
 ```
+
+macOS setup: `python3.12 -m venv .venv` (Homebrew's default `python3` may be 3.13), then the same commands with `.venv/bin/python`.
 
 ## Layering
 
@@ -51,6 +53,8 @@ Source of truth, in order: `PROJECT_CONTEXT.md` > `docs/*` > code. If they disag
 8. **Windows git**: `SSL certificate problem: unable to get local issuer certificate` on fetch/push -> `git config --global http.sslBackend schannel`.
 9. **smolagents `ApiModel` retries rate limits itself** (60 s, exponential, 3 attempts). Pass `retry=False` when you want to fail fast.
 10. **Streamlit `st.data_editor`**: all-`None` text columns become float and break `TextColumn` - cast to `"string"` dtype; edited cells come back as `pd.NA`/`NaN`, normalize to `None`.
+11. **`.env` changes need an app restart**: `load_dotenv()` does not override variables already in `os.environ`, so a running Streamlit keeps the old (even empty) values until the process is restarted.
+12. **Streamlit `AppTest` (1.67)**: dataframe row selection is simulated with `at.session_state[<key>] = {"selection": {"rows": [i], "columns": [], "cells": []}}`; dialogs have no public accessor - walk `at._tree` for `Block` protos with a `dialog` field (see `tests/test_app.py::dialog_titles`).
 
 ## Workflow
 
