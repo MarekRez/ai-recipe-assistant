@@ -129,3 +129,11 @@ Chronological log of important AI-related implementation decisions, experiments,
 - Result:
 - Next:
 ```
+
+## 2026-11-25 - Agent scope rule for unrelated questions
+
+- Finding: `INSTRUCTIONS` had no rule for off-topic questions and nothing filtered input before `ask_agent()`, so the
+  agent answered general questions (one Gemini request each, no tools needed).
+- Change: rule 9 - decline unrelated questions in one sentence, no tool calls, suggest an example recipe question.
+  Same instructions are used by the Claude fallback. Offline test checks the rule is in the prompt; live behaviour
+  not yet verified (HANDOFF Next Up 4).
