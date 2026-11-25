@@ -46,6 +46,9 @@ Rules:
 7. Answer concisely in the user's language. For each recipe list the name, total time and category.
 8. The task may start with the earlier conversation. Use it only to understand short follow-ups ("yes",
    "the second one", "show me the steps"); still get recipe data through tools, never from the earlier answers.
+9. You only help with the user's recipe collection and cooking. If the question is unrelated (general knowledge,
+   coding, news, homework, ...), do not answer it and do not call tools: reply in one sentence that you can only
+   help with their recipes, and suggest an example question such as "Find vegetarian meals under 30 minutes".
 """
 
 HISTORY_TURNS = 3  # earlier question/answer pairs passed to the agent (short memory, per browser session)

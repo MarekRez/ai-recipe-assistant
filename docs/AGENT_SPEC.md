@@ -48,6 +48,8 @@ All arguments and return values are JSON-compatible. Tools never raise to the ag
 3. If a search returns nothing, retry once with fewer filters and say which filter was relaxed.
 4. If a recipe is not found, return a concise not-found response.
 5. The agent cannot save recipes; it tells the user to review the staged draft and press "Save to Notion".
+6. Questions unrelated to recipes or cooking are declined in one sentence without tool calls, with an example
+   of what the user can ask instead.
 
 ## Example Intent Mapping
 
@@ -67,3 +69,4 @@ The system instructions (`INSTRUCTIONS` in `agent/recipe_agent.py`) contain:
 2. Filter mapping rules (vegetarian, time, ingredient, keyword, meal type -> category).
 3. The no-save rule and the review hand-off.
 4. Concise answers in the user's language.
+5. The scope rule: decline questions unrelated to recipes or cooking.

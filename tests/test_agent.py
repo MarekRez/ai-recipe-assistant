@@ -181,3 +181,8 @@ def test_browse_tool_returns_errors(monkeypatch):
 
 def test_instructions_send_vague_requests_to_browse():
     assert "browse_recipes" in recipe_agent.INSTRUCTIONS and "never invent" in recipe_agent.INSTRUCTIONS
+
+
+def test_instructions_decline_unrelated_questions():
+    assert "only help with the user's recipe collection and cooking" in recipe_agent.INSTRUCTIONS
+    assert "do not call tools" in recipe_agent.INSTRUCTIONS
